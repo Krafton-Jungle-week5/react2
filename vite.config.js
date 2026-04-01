@@ -10,7 +10,6 @@ export default defineConfig({
       entry: {
         index: resolve(rootDir, 'src/index.js'),
         vdom: resolve(rootDir, 'src/lib/vdom.js'),
-        fiber: resolve(rootDir, 'src/lib/fiber.js'),
       },
       formats: ['es'],
     },

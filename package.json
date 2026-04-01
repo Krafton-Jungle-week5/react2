@@ -1,12 +1,12 @@
 {
   "name": "react2-vdom",
   "version": "0.1.0",
-  "description": "Reusable virtual DOM diff and fiber commit engine extracted without the demo playground.",
+  "description": "Reusable virtual DOM diff and patch engine with root-level hooks and demo apps.",
   "keywords": [
     "virtual-dom",
-    "fiber",
     "dom-diff",
-    "dom"
+    "dom",
+    "hooks"
   ],
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,6 @@
   "exports": {
     ".": "./dist/index.js",
     "./vdom": "./dist/vdom.js",
-    "./fiber": "./dist/fiber.js",
     "./package.json": "./package.json"
   },
   "scripts": {

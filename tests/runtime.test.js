@@ -169,6 +169,6 @@ describe('FunctionComponent runtime', () => {
 
     expect(() => {
       new FunctionComponent(App).mount(container);
-    }).toThrow('최상위 루트 컴포넌트에서만');
+    }).toThrow('root component');
   });
 });

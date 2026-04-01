@@ -5,7 +5,7 @@ let activeComponent = null;
 export class FunctionComponent {
   constructor(renderFn, props = {}) {
     if (typeof renderFn !== 'function') {
-      throw new TypeError('FunctionComponent must receive a function component.');
+      throw new TypeError('FunctionComponent는 함수형 컴포넌트를 받아야 합니다.');
     }
 
     this.renderFn = renderFn;
@@ -24,7 +24,7 @@ export class FunctionComponent {
 
   mount(container) {
     if (!container) {
-      throw new Error('mount() needs a real DOM container.');
+      throw new Error('mount()에는 실제 DOM 컨테이너가 필요합니다.');
     }
 
     this.container = container;
@@ -34,7 +34,7 @@ export class FunctionComponent {
 
   update(nextProps = this.props) {
     if (!this.container) {
-      throw new Error('update() can only be called after mount().');
+      throw new Error('mount() 이후에만 update()를 호출할 수 있습니다.');
     }
 
     this.props = nextProps;
@@ -66,7 +66,7 @@ export class FunctionComponent {
 
   renderAndCommit() {
     if (this.isRendering) {
-      throw new Error('update() cannot run while rendering is in progress.');
+      throw new Error('렌더링 도중에는 update()를 다시 실행할 수 없습니다.');
     }
 
     this.hookIndex = 0;
@@ -168,7 +168,7 @@ export function useState(initialValue) {
 
   const setState = (nextValue) => {
     if (component.isRendering) {
-      throw new Error('setState must be called from an event or effect, not during render.');
+      throw new Error('setState는 렌더링 중이 아니라 이벤트나 effect 안에서 호출해야 합니다.');
     }
 
     hook.queue.push(nextValue);
@@ -229,11 +229,11 @@ export function useMemo(factory, deps) {
 
 function assertHookAccess(name) {
   if (!activeComponent || !activeComponent.isRendering) {
-    throw new Error(`${name} can only be used while FunctionComponent is rendering.`);
+    throw new Error(`${name}는 FunctionComponent 렌더링 중에만 사용할 수 있습니다.`);
   }
 
   if (activeComponent.childRenderDepth > 0) {
-    throw new Error(`${name} can only be used in the root component of this runtime.`);
+    throw new Error(`${name}는 최상위 루트 컴포넌트에서만 사용할 수 있습니다.`);
   }
 
   return activeComponent;
@@ -241,7 +241,7 @@ function assertHookAccess(name) {
 
 function assertHookKind(hook, expectedKind, name) {
   if (hook.kind !== expectedKind) {
-    throw new Error(`${name} was called in a different order. Hooks must keep a stable call order.`);
+    throw new Error(`${name} 호출 순서가 바뀌었습니다. Hook은 항상 같은 순서로 호출되어야 합니다.`);
   }
 }
 
@@ -309,7 +309,7 @@ function normalizeChildValue(child) {
     return child.type === 'root' ? child.children || [] : [child];
   }
 
-  throw new TypeError('Components may only return Virtual DOM nodes, strings, numbers, or arrays.');
+  throw new TypeError('컴포넌트는 Virtual DOM 노드, 문자열, 숫자, 배열만 반환할 수 있습니다.');
 }
 
 function isVNode(node) {
