@@ -4,93 +4,40 @@ import {
   createInitialGameState,
   getCurrentBoard,
   getMoveCount,
-  jumpToMove,
   resetBoard,
   playMove,
 } from '../tic-tac-toe/model.js';
-import {
-  createInitialTimeline,
-  createTimelineEntry,
-  appendTimelineEntry,
-  describeAction,
-  describeCommit,
-  describeEffectSync,
-  startTimeline,
-} from '../tic-tac-toe/timeline.js';
+import { createRuntimeInspectorStore, mountRuntimeInspector } from './runtime-inspector.js';
 import './styles.css';
 
 function App() {
   const [game, setGame] = useState(createInitialGameState);
-  const [timeline, setTimeline] = useState(createInitialTimeline);
   const board = getCurrentBoard(game);
 
   const result = useMemo(() => calculateResult(board), [board]);
   const moveCount = useMemo(() => getMoveCount(board), [board]);
   const statusText = useMemo(() => {
     if (result.winner) {
-      return `${result.winner} wins the round.`;
+      return `${result.winner}가 이번 라운드에서 승리했습니다.`;
     }
 
     if (result.isDraw) {
-      return 'Draw game. Reset the board or jump to an earlier move.';
+      return '무승부입니다. 보드를 다시 시작해보세요.';
     }
 
-    return `${game.xIsNext ? 'X' : 'O'} turn. Choose a square.`;
+    return `${game.xIsNext ? 'X' : 'O'} 차례입니다. 칸을 선택하세요.`;
   }, [game.xIsNext, result.isDraw, result.winner]);
 
   useEffect(() => {
-    setTimeline((currentTimeline) =>
-      appendTimelineEntry(
-        currentTimeline,
-        createTimelineEntry('render', 'Render committed', describeCommit(game, result, moveCount)),
-      ),
-    );
-  }, [game, moveCount, result]);
-
-  useEffect(() => {
     document.title = result.winner
-      ? `Tic-Tac-Toe - ${result.winner} won`
+      ? `틱택토 - ${result.winner} 승리`
       : result.isDraw
-        ? 'Tic-Tac-Toe - Draw'
-        : `Tic-Tac-Toe - ${game.xIsNext ? 'X' : 'O'} turn`;
-
-    setTimeline((currentTimeline) =>
-      appendTimelineEntry(
-        currentTimeline,
-        createTimelineEntry('effect', 'Effect synchronized', describeEffectSync(game.xIsNext, result)),
-      ),
-    );
+        ? '틱택토 - 무승부'
+        : `틱택토 - ${game.xIsNext ? 'X' : 'O'} 차례`;
   }, [game.xIsNext, result]);
 
-  const applyGameAction = (action, nextGame) => {
-    if (nextGame === game) {
-      setTimeline(
-        startTimeline(
-          createTimelineEntry('action', 'Input ignored', describeAction({ ...action, accepted: false }, game, result)),
-        ),
-      );
-      return;
-    }
-
-    const nextBoard = getCurrentBoard(nextGame);
-    const nextResult = calculateResult(nextBoard);
-
-    setTimeline(
-      startTimeline(
-        createTimelineEntry(
-          'action',
-          action.type === 'square' ? `Square ${action.index + 1} clicked` : action.title,
-          describeAction({ ...action, accepted: true }, nextGame, nextResult),
-        ),
-        createTimelineEntry(
-          'state',
-          'Root state queued',
-          `The root App scheduled a new game snapshot. Next step: ${nextGame.stepIndex}, next turn: ${nextGame.xIsNext ? 'X' : 'O'}.`,
-        ),
-      ),
-    );
-
-    setGame(nextGame);
+  const handleSquareClick = (index) => {
+    setGame((currentGame) => playMove(currentGame, index));
   };
 
   return h(
@@ -102,12 +49,12 @@ function App() {
       h(
         'div',
         { class: 'hero-copy' },
-        h('p', { class: 'eyebrow' }, 'React2 Demo'),
-        h('h1', { class: 'hero-title' }, 'Tic-Tac-Toe Playground'),
+        h('p', { class: 'eyebrow' }, '리액트 구현 데모'),
+        h('h1', { class: 'hero-title' }, '틱택토 플레이그라운드'),
         h(
           'p',
           { class: 'hero-description' },
-          'The sidebar now shows what our custom React runtime does after each input: root state scheduling, render commit, and the effect that syncs the browser title.',
+          '왼쪽 보드는 우리가 구현한 루트 상태 기반 앱이고, 아래 인스펙터는 hooks 슬롯과 렌더링 파이프라인을 그대로 보여줍니다.',
         ),
       ),
       h(StatusPanel, {
@@ -129,19 +76,19 @@ function App() {
           h(
             'div',
             {},
-            h('p', { class: 'panel-kicker' }, 'Board'),
+            h('p', { class: 'panel-kicker' }, '보드'),
             h('h2', { class: 'section-title' }, statusText),
           ),
           h(
             'div',
             { class: 'move-pill' },
-            'Moves',
+            '수',
             h('strong', {}, `${moveCount}/9`),
           ),
         ),
         h(Board, {
           board,
-          onSquareClick: (index) => applyGameAction({ type: 'square', index }, playMove(game, index)),
+          onSquareClick: handleSquareClick,
           winningLine: result.winningLine,
         }),
         h(
@@ -151,19 +98,19 @@ function App() {
             'button',
             {
               class: 'primary-button',
-              onClick: () => applyGameAction({ type: 'reset-board', title: 'Board reset requested' }, resetBoard(game)),
+              onClick: () => setGame((currentGame) => resetBoard(currentGame)),
               type: 'button',
             },
-            'Reset Board',
+            '보드 초기화',
           ),
           h(
             'button',
             {
               class: 'ghost-button',
-              onClick: () => applyGameAction({ type: 'reset-score', title: 'Full reset requested' }, createInitialGameState()),
+              onClick: () => setGame(createInitialGameState()),
               type: 'button',
             },
-            'Reset Score',
+            '점수까지 초기화',
           ),
         ),
       ),
@@ -171,17 +118,7 @@ function App() {
         'aside',
         { class: 'side-panel' },
         h(ScoreCard, { score: game.score }),
-        h(GuideCard, { playedMoves: game.history.length - 1 }),
-        h(RuntimeTimelineCard, { timeline }),
-        h(TimeTravelCard, {
-          history: game.history,
-          stepIndex: game.stepIndex,
-          onJump: (stepIndex) =>
-            applyGameAction(
-              { type: 'jump', stepIndex, title: `Jumped to move ${stepIndex}` },
-              jumpToMove(game, stepIndex),
-            ),
-        }),
+        h(RuntimeSummaryCard, { moveCount, result }),
       ),
     ),
   );
@@ -193,14 +130,14 @@ function StatusPanel({ moveCount, statusText, winner, xIsNext }) {
     : xIsNext
       ? 'status-badge is-x'
       : 'status-badge is-o';
-  const badgeText = winner || (xIsNext ? 'X TURN' : 'O TURN');
+  const badgeText = winner || (xIsNext ? 'X 차례' : 'O 차례');
 
   return h(
     'div',
     { class: 'status-card' },
     h('span', { class: badgeClass }, badgeText),
     h('strong', { class: 'status-title' }, statusText),
-    h('p', { class: 'status-caption' }, `${moveCount} squares are filled in the current round.`),
+    h('p', { class: 'status-caption' }, `현재 라운드에서 ${moveCount}칸이 채워져 있습니다.`),
   );
 }
 
@@ -220,18 +157,14 @@ function Board({ board, onSquareClick, winningLine }) {
 }
 
 function Square({ index, isWinning, onClick, value }) {
-  const className = [
-    'square-button',
-    value ? `is-${value.toLowerCase()}` : '',
-    isWinning ? 'is-winning' : '',
-  ]
+  const className = ['square-button', value ? `is-${value.toLowerCase()}` : '', isWinning ? 'is-winning' : '']
     .filter(Boolean)
     .join(' ');
 
   return h(
     'button',
     {
-      'aria-label': `square-${index + 1}`,
+      'aria-label': `칸-${index + 1}`,
       class: className,
       onClick,
       type: 'button',
@@ -244,13 +177,13 @@ function ScoreCard({ score }) {
   return h(
     'section',
     { class: 'info-card' },
-    h('p', { class: 'panel-kicker' }, 'Score'),
+    h('p', { class: 'panel-kicker' }, '점수'),
     h(
       'div',
       { class: 'score-grid' },
-      h(ScoreItem, { label: 'X Wins', value: score.x }),
-      h(ScoreItem, { label: 'O Wins', value: score.o }),
-      h(ScoreItem, { label: 'Draws', value: score.draws }),
+      h(ScoreItem, { label: 'X 승리', value: score.x }),
+      h(ScoreItem, { label: 'O 승리', value: score.o }),
+      h(ScoreItem, { label: '무승부', value: score.draws }),
     ),
   );
 }
@@ -264,71 +197,35 @@ function ScoreItem({ label, value }) {
   );
 }
 
-function GuideCard({ playedMoves }) {
+function RuntimeSummaryCard({ moveCount, result }) {
+  const summary = result.winner
+    ? `${result.winner} 승리 상태라 다음 클릭은 무시됩니다.`
+    : result.isDraw
+      ? '무승부 상태라 reset 버튼으로 다음 라운드를 시작할 수 있습니다.'
+      : '클릭할 때마다 hooks 패널과 렌더링 흐름 패널이 함께 갱신됩니다.';
+
   return h(
     'section',
     { class: 'info-card' },
-    h('p', { class: 'panel-kicker' }, 'Runtime Notes'),
-    h(
-      'ul',
-      { class: 'guide-list' },
-      h('li', {}, 'All state lives in the root App component.'),
-      h('li', {}, 'Child components stay pure and only receive props from the root.'),
-      h('li', {}, 'The runtime timeline focuses on queued state, committed render, and effect sync.'),
-      h('li', {}, `The board has committed ${playedMoves} move${playedMoves === 1 ? '' : 's'} so far.`),
-    ),
+    h('p', { class: 'panel-kicker' }, '시연 포인트'),
+    h('h3', { class: 'history-title' }, '지금 설명하기 좋은 내용'),
+    h('p', { class: 'timeline-detail' }, summary),
+    h('p', { class: 'timeline-detail' }, `현재 보드에 놓인 말 수는 ${moveCount}개입니다.`),
   );
 }
 
-function RuntimeTimelineCard({ timeline }) {
-  return h(
-    'section',
-    { class: 'info-card history-card' },
-    h('p', { class: 'panel-kicker' }, 'Runtime Timeline'),
-    h('h3', { class: 'history-title' }, 'Internal Flow'),
-    h(
-      'div',
-      { class: 'timeline-list' },
-      ...timeline.map((entry) =>
-        h(
-          'article',
-          {
-            class: `timeline-entry is-${entry.kind}`,
-            'data-key': entry.id,
-          },
-          h('strong', { class: 'timeline-title' }, entry.title),
-          h('p', { class: 'timeline-detail' }, entry.detail),
-        ),
-      ),
-    ),
-  );
-}
+const appContainer = document.querySelector('#app');
+const inspectorContainer = document.querySelector('#inspector-root');
+const inspectorStore = createRuntimeInspectorStore();
 
-function TimeTravelCard({ history, onJump, stepIndex }) {
-  return h(
-    'section',
-    { class: 'info-card history-card' },
-    h('p', { class: 'panel-kicker' }, 'Time Travel'),
-    h('h3', { class: 'history-title' }, 'Board Snapshots'),
-    h(
-      'div',
-      { class: 'history-list' },
-      ...history.map((board, index) =>
-        h(
-          'button',
-          {
-            class: index === stepIndex ? 'history-button is-active' : 'history-button',
-            onClick: () => onJump(index),
-            type: 'button',
-          },
-          index === 0 ? 'Go to game start' : `Go to move ${index}`,
-        ),
-      ),
-    ),
-  );
-}
-
-const container = document.querySelector('#app');
 const app = new FunctionComponent(App);
+app.attachInspector(inspectorStore).mount(appContainer);
 
-app.mount(container);
+if (inspectorContainer) {
+  mountRuntimeInspector(
+    inspectorContainer,
+    inspectorStore,
+    'Hooks + 렌더 파이프라인',
+    'useState, useMemo, useEffect가 몇 번째 슬롯에 저장됐는지와 setState 이후 렌더링 파이프라인이 어떤 순서로 진행되는지 한눈에 볼 수 있습니다.',
+  );
+}

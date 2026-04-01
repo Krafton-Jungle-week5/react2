@@ -171,4 +171,49 @@ describe('FunctionComponent runtime', () => {
       new FunctionComponent(App).mount(container);
     }).toThrow('root component');
   });
+
+  it('publishes hook slots and render flow snapshots to the attached inspector', async () => {
+    const container = document.createElement('div');
+    const snapshots = [];
+
+    function App() {
+      const [count, setCount] = useState(0);
+      const doubled = useMemo(() => count * 2, [count]);
+
+      useEffect(() => {
+        document.body.dataset.count = String(count);
+      }, [count]);
+
+      return h(
+        'button',
+        {
+          id: 'inspector-button',
+          onClick: () => setCount((value) => value + 1),
+          type: 'button',
+        },
+        `value:${doubled}`,
+      );
+    }
+
+    new FunctionComponent(App)
+      .attachInspector({
+        publish(snapshot) {
+          snapshots.push(snapshot);
+        },
+      })
+      .mount(container);
+
+    snapshots.length = 0;
+
+    container.querySelector('#inspector-button').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUpdates();
+
+    const snapshot = snapshots.at(-1);
+
+    expect(snapshot.hooks.map((hook) => hook.hook)).toEqual(['useState', 'useMemo', 'useEffect']);
+    expect(snapshot.flow.some((entry) => entry.title.includes('useState 슬롯 0'))).toBe(true);
+    expect(snapshot.flow.some((entry) => entry.title.includes('scheduleUpdate'))).toBe(true);
+    expect(snapshot.flow.some((entry) => entry.title.includes('renderAndCommit'))).toBe(true);
+    expect(snapshot.flow.some((entry) => entry.title.includes('useEffect 슬롯 2 실행'))).toBe(true);
+  });
 });

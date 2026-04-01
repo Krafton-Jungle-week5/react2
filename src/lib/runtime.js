@@ -20,6 +20,20 @@ export class FunctionComponent {
     this.isRendering = false;
     this.childRenderDepth = 0;
     this.renderCount = 0;
+    this.inspector = null;
+    this.debugFlow = [];
+    this.lastPatchOperations = [];
+    this.debugSnapshot = createDebugSnapshot(this);
+  }
+
+  attachInspector(inspector) {
+    this.inspector = inspector;
+    this.publishDebugSnapshot();
+    return this;
+  }
+
+  getDebugSnapshot() {
+    return this.debugSnapshot;
   }
 
   mount(container) {
@@ -38,6 +52,11 @@ export class FunctionComponent {
     }
 
     this.props = nextProps;
+    this.recordDebugStep(
+      'scheduler',
+      `${this.getComponentLabel()}.update() 실행`,
+      '예약된 microtask가 실행되면서 루트 컴포넌트가 다시 렌더링을 시작합니다.',
+    );
     this.renderAndCommit();
     return this;
   }
@@ -48,6 +67,11 @@ export class FunctionComponent {
     }
 
     this.updateScheduled = true;
+    this.recordDebugStep(
+      'scheduler',
+      `${this.getComponentLabel()}.scheduleUpdate() 예약`,
+      'setState가 만든 변경을 한 번의 microtask로 모아서 처리합니다.',
+    );
     scheduleMicrotask(() => {
       this.updateScheduled = false;
       this.update(this.props);
@@ -72,6 +96,11 @@ export class FunctionComponent {
     this.hookIndex = 0;
     this.pendingEffects = [];
     this.isRendering = true;
+    this.recordDebugStep(
+      'render',
+      `${this.getComponentLabel()}.renderAndCommit() 시작`,
+      'hookIndex를 0으로 되돌리고 루트 함수형 컴포넌트를 다시 실행합니다.',
+    );
 
     const previousComponent = activeComponent;
     let nextTree;
@@ -88,12 +117,30 @@ export class FunctionComponent {
     if (!this.isMounted) {
       mountVNode(this.container, nextTree);
       this.isMounted = true;
+      this.lastPatchOperations = [];
+      this.recordDebugStep(
+        'patch',
+        '초기 마운트',
+        '첫 렌더에서는 이전 트리가 없어서 Virtual DOM을 그대로 실제 DOM에 마운트합니다.',
+      );
     } else {
-      patchDom(this.container, this.currentTree, nextTree);
+      const operations = patchDom(this.container, this.currentTree, nextTree);
+      this.lastPatchOperations = operations;
+      this.recordDebugStep(
+        'diff',
+        'diff 단계 완료',
+        `이전 트리와 새 트리를 비교해서 ${operations.length}개의 패치 작업을 찾았습니다.`,
+      );
+      this.recordDebugStep(
+        'patch',
+        'patch 단계 완료',
+        summarizePatchOperations(operations),
+      );
     }
 
     this.currentTree = nextTree;
     this.renderCount += 1;
+    this.publishDebugSnapshot();
     this.flushEffects();
   }
 
@@ -101,16 +148,65 @@ export class FunctionComponent {
     const effectQueue = this.pendingEffects;
     this.pendingEffects = [];
 
+    if (effectQueue.length) {
+      this.recordDebugStep(
+        'effect',
+        'flushEffects() 실행',
+        `${effectQueue.length}개의 useEffect callback을 커밋 이후 순서대로 실행합니다.`,
+      );
+    }
+
     for (const entry of effectQueue) {
       const hook = this.hooks[entry.index];
 
       if (typeof hook.cleanup === 'function') {
+        this.recordDebugStep(
+          'effect',
+          `useEffect 슬롯 ${entry.index} cleanup`,
+          '이전 effect가 남긴 cleanup 함수를 먼저 실행합니다.',
+        );
         hook.cleanup();
       }
 
+      this.recordDebugStep(
+        'effect',
+        `useEffect 슬롯 ${entry.index} 실행`,
+        '의존성이 변경된 effect callback을 실행합니다.',
+      );
       const cleanup = entry.callback();
       hook.cleanup = typeof cleanup === 'function' ? cleanup : null;
+      this.publishDebugSnapshot();
     }
+  }
+
+  resetDebugFlow() {
+    this.debugFlow = [];
+    this.publishDebugSnapshot();
+  }
+
+  recordDebugStep(kind, title, detail) {
+    this.debugFlow = [
+      ...this.debugFlow,
+      {
+        id: `flow-${this.renderCount}-${this.debugFlow.length + 1}`,
+        kind,
+        title,
+        detail,
+      },
+    ];
+    this.publishDebugSnapshot();
+  }
+
+  publishDebugSnapshot() {
+    this.debugSnapshot = createDebugSnapshot(this);
+
+    if (this.inspector?.publish) {
+      this.inspector.publish(this.debugSnapshot);
+    }
+  }
+
+  getComponentLabel() {
+    return this.renderFn.name || 'App';
   }
 }
 
@@ -159,7 +255,16 @@ export function useState(initialValue) {
       throw new Error('setState must be called from an event or effect, not during render.');
     }
 
+    if (!component.updateScheduled) {
+      component.resetDebugFlow();
+    }
+
     hook.queue.push(nextValue);
+    component.recordDebugStep(
+      'state',
+      `useState 슬롯 ${component.hooks.indexOf(hook)} queue 적재`,
+      `루트 ${component.getComponentLabel()}의 useState가 다음 값을 큐에 넣었습니다. 현재 대기 중인 업데이트 수는 ${hook.queue.length}개입니다.`,
+    );
     component.scheduleUpdate();
   };
 
@@ -181,6 +286,11 @@ export function useEffect(callback, deps) {
   );
 
   if (shouldRunHook(hook.deps, deps)) {
+    component.recordDebugStep(
+      'effect',
+      `useEffect 슬롯 ${index} 등록`,
+      '의존성이 바뀌어서 이번 커밋 이후 effect callback이 실행되도록 예약했습니다.',
+    );
     component.pendingEffects.push({
       index,
       callback,
@@ -205,6 +315,11 @@ export function useMemo(factory, deps) {
   if (shouldRunHook(hook.deps, deps)) {
     hook.value = factory();
     hook.deps = cloneDeps(deps);
+    component.recordDebugStep(
+      'memo',
+      `useMemo 슬롯 ${component.hooks.indexOf(hook)} 재계산`,
+      `의존성이 바뀌어서 memo 값을 다시 계산했습니다. 현재 값: ${summarizeValue(hook.value)}.`,
+    );
   }
 
   return hook.value;
@@ -345,6 +460,77 @@ function flushStateQueue(hook) {
 
   hook.queue = [];
   hook.value = nextValue;
+}
+
+function createDebugSnapshot(component) {
+  return {
+    renderCount: component.renderCount,
+    hooks: component.hooks.map((hook, index) => createHookSnapshot(hook, index)),
+    flow: component.debugFlow,
+    patchSummary: summarizePatchOperations(component.lastPatchOperations),
+  };
+}
+
+function createHookSnapshot(hook, index) {
+  if (hook.kind === 'state') {
+    return {
+      slot: index,
+      hook: 'useState',
+      summary: summarizeValue(hook.value),
+      detail: `현재 값: ${summarizeValue(hook.value)}, 대기 중 queue: ${hook.queue.length}개`,
+    };
+  }
+
+  if (hook.kind === 'memo') {
+    return {
+      slot: index,
+      hook: 'useMemo',
+      summary: summarizeValue(hook.value),
+      detail: `deps: ${summarizeDeps(hook.deps)}, 계산 결과: ${summarizeValue(hook.value)}`,
+    };
+  }
+
+  return {
+    slot: index,
+    hook: 'useEffect',
+    summary: hook.cleanup ? 'cleanup 보유' : 'cleanup 없음',
+    detail: `deps: ${summarizeDeps(hook.deps)}, cleanup: ${hook.cleanup ? '있음' : '없음'}`,
+  };
+}
+
+function summarizePatchOperations(operations = []) {
+  if (!operations.length) {
+    return '적용할 patch 작업이 없었습니다.';
+  }
+
+  const counts = operations.reduce((map, operation) => {
+    map[operation.type] = (map[operation.type] || 0) + 1;
+    return map;
+  }, {});
+
+  return Object.entries(counts)
+    .map(([type, count]) => `${type} ${count}개`)
+    .join(', ');
+}
+
+function summarizeDeps(deps) {
+  if (!Array.isArray(deps)) {
+    return '없음';
+  }
+
+  return deps.map((value) => summarizeValue(value)).join(', ');
+}
+
+function summarizeValue(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean' || value == null) {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
 }
 
 function scheduleMicrotask(callback) {

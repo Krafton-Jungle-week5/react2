@@ -22,18 +22,25 @@ button {
 }
 
 #app {
-  min-height: 100vh;
+  min-height: 0;
 }
 
 .page-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 40px 0 72px;
+  padding: 40px 0 24px;
+}
+
+#inspector-root {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding-bottom: 72px;
 }
 
 .hero-panel,
 .board-panel,
-.info-card {
+.info-card,
+.inspector-shell {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
   background: rgba(10, 22, 40, 0.88);
@@ -229,6 +236,27 @@ button {
   gap: 16px;
 }
 
+.inspector-shell {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.inspector-hero {
+  grid-column: 1 / -1;
+}
+
+.inspector-description,
+.inspector-render-count {
+  margin: 0;
+}
+
+.inspector-render-count {
+  color: #ecf4ff;
+  font-weight: 700;
+}
+
 .info-card {
   padding: 20px;
 }
@@ -303,6 +331,22 @@ button {
   border-color: rgba(218, 156, 255, 0.28);
 }
 
+.timeline-entry.is-scheduler,
+.hook-slot-card {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.timeline-entry.is-memo,
+.hook-slot-card {
+  background: rgba(11, 19, 39, 0.92);
+}
+
+.hook-slot-card {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(114, 221, 247, 0.22);
+}
+
 .timeline-title {
   display: block;
   margin-bottom: 6px;
@@ -329,7 +373,8 @@ button {
 
 @media (max-width: 980px) {
   .hero-panel,
-  .game-layout {
+  .game-layout,
+  .inspector-shell {
     grid-template-columns: 1fr;
   }
 }
