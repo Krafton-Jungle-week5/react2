@@ -1,6 +1,6 @@
-# react2
+# react
 
-`react2`는 React의 핵심 개념인 Component, State, Hooks를 4주차에 구현했던 Virtual DOM 위에 확장한 학습형 프로젝트입니다.
+`react`는 React의 핵심 개념인 Component, State, Hooks를 4주차에 구현했던 Virtual DOM 위에 확장한 학습형 프로젝트입니다.
 
 ## 1. 핵심 구현 내용
 
