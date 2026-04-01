@@ -9,15 +9,18 @@
       .laneTitle { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
       .label { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
       .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .groupLabel { font: 700 14px 'Segoe UI', Arial, sans-serif; fill: #1d4ed8; }
       .note { font: 600 12px 'Segoe UI', Arial, sans-serif; fill: #854d0e; }
       .box { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; rx: 10; }
       .noteBox { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.2; rx: 8; }
-      .groupBox { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; stroke-dasharray: 6 6; rx: 12; }
+      .groupBox { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2; stroke-dasharray: 8 5; rx: 12; }
       .lane { stroke: #cbd5e1; stroke-width: 2; }
       .arrow { stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
       .return { stroke: #64748b; stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#arrow); }
     </style>
   </defs>
+
+  <rect x="0" y="0" width="1600" height="980" fill="#ffffff"/>
 
   <text x="70" y="48" class="title">Button Click Update Flow</text>
   <text x="70" y="76" class="subtitle">Based on the latest code in codex-week5-hooks-demo. This diagram shows the update path after the page is already mounted.</text>
@@ -104,21 +107,22 @@
 
     <g>
       <rect x="1210" y="718" width="330" height="95" class="groupBox"/>
-      <text x="1228" y="740" class="small">update render path</text>
+      <text x="1228" y="740" class="groupLabel">patchDom 내부 처리</text>
+      <text x="1228" y="758" class="small">diff 계산 후 patch 연산을 정렬하고 적용</text>
 
-      <line x1="800" y1="760" x2="1455" y2="760" class="arrow"/>
-      <text x="1128" y="751" text-anchor="middle" class="label">patchDom(container, currentTree, nextTree)</text>
+      <line x1="800" y1="770" x2="1455" y2="770" class="arrow"/>
+      <text x="1128" y="761" text-anchor="middle" class="label">patchDom(container, currentTree, nextTree)</text>
 
-      <line x1="1455" y1="790" x2="1295" y2="790" class="arrow"/>
-      <text x="1375" y="781" text-anchor="middle" class="small">diffTrees(previousTree, nextTree)</text>
+      <line x1="1455" y1="798" x2="1295" y2="798" class="arrow"/>
+      <text x="1375" y="789" text-anchor="middle" class="small">diffTrees(previousTree, nextTree)</text>
 
-      <line x1="1295" y1="820" x2="1455" y2="820" class="return"/>
-      <text x="1375" y="811" text-anchor="middle" class="small">operations 반환</text>
+      <line x1="1295" y1="826" x2="1455" y2="826" class="return"/>
+      <text x="1375" y="817" text-anchor="middle" class="small">operations 반환</text>
 
-      <text x="1455" y="845" text-anchor="middle" class="small">sortPatchOperations()</text>
-      <text x="1455" y="864" text-anchor="middle" class="small">applyPatchOperations()</text>
-      <line x1="1455" y1="878" x2="240" y2="878" class="arrow"/>
-      <text x="848" y="869" text-anchor="middle" class="label">필요한 DOM만 patch 적용</text>
+      <text x="1455" y="848" text-anchor="middle" class="small">sortPatchOperations()</text>
+      <text x="1455" y="867" text-anchor="middle" class="small">applyPatchOperations()</text>
+      <line x1="1455" y1="882" x2="240" y2="882" class="arrow"/>
+      <text x="848" y="873" text-anchor="middle" class="label">필요한 DOM만 patch 적용</text>
     </g>
 
     <path d="M800 900 C850 900, 850 938, 800 938" class="arrow"/>

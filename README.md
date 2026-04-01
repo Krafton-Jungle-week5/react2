@@ -57,7 +57,7 @@ npm run dev
 
 아래 이미지는 현재 `codex-week5-hooks-demo` 브랜치 최신 코드 기준으로, 이미 마운트된 화면에서 버튼을 클릭한 뒤 `setState`, `scheduleUpdate`, `renderAndCommit`, `patchDom`, `flushEffects`로 이어지는 호출 흐름을 정리한 것입니다.
 
-![렌더링 시퀀스 다이어그램](./docs/sequence-diagram-latest.svg)
+![렌더링 시퀀스 다이어그램](./docs/sequence%20diagram.svg)
 
 ## 실제 React와의 차이
 
