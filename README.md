@@ -1,96 +1,100 @@
-# react2
+﻿# react2
 
-`react2`는 React의 핵심 개념인 Component, State, Hooks, Virtual DOM + Diff + Patch를 직접 구현해 보는 실습 프로젝트입니다.  
-함수형 컴포넌트만 지원하며, 상태는 루트 `FunctionComponent`에만 저장됩니다.
+React의 핵심 개념인 Component, State, Hooks를 4주차에 구현했던 Virtual DOM 위에 구현한 학습형 프로젝트입니다.
 
-## 구현 목표
+## 1. 핵심 구현 내용
 
-- 함수형 컴포넌트 기반 UI 분리
-- 루트 컴포넌트에서만 상태 관리
-- `useState`, `useMemo`, `useEffect` 직접 구현
-- Virtual DOM 생성 후 이전 트리와 비교(diff)
-- 바뀐 부분만 실제 DOM에 반영(patch)
-- 브라우저에서 동작하는 인터랙티브 데모 제공
+### Root-Level Hooks Runtime
 
-## 포함된 모듈
+- `FunctionComponent` 클래스로 루트 컴포넌트를 관리
+- `useState`, `useMemo`, `useEffect`를 직접 구현
+- 모든 Hook 상태는 루트 컴포넌트의 `hooks[]` 배열에 저장
+- Hook 호출 순서를 인덱스로 추적해 안정적인 실행 순서 유지
+- 자식 컴포넌트에서는 Hook 사용을 제한하여 현재 런타임 설계를 명확히 유지
 
-- `src/lib/vdom.js`
-  - Virtual DOM 생성, diff, patch, 직렬화
-- `src/lib/runtime.js`
-  - `FunctionComponent`, `h`, `useState`, `useMemo`, `useEffect`
-  - root hooks 저장소와 microtask 기반 batching
-  - hooks 시각화 / 렌더링 흐름 추적용 inspector snapshot 제공
-- `src/demo`
-  - 메인 Tic-Tac-Toe 데모와 runtime inspector
-- `src/nonfiber-demo`
-  - non-fiber 엔트리 데모
-- `src/tic-tac-toe/model.js`
-  - 게임 상태 전이와 승패 계산 로직
+### 상태 업데이트와 배치 처리
 
-## 설치
+- `setState`는 즉시 DOM을 바꾸지 않고 updater를 queue에 저장
+- 여러 상태 변경은 microtask 단위로 batch 처리
+- 같은 이벤트 안의 연속 `setState`도 하나의 rerender로 합쳐짐
+
+### Virtual DOM Diff / Patch 엔진
+
+- VNode 생성, DOM -> VNode 변환, HTML 직렬화 지원
+- 이전 트리와 다음 트리를 비교해 patch operation 생성
+- `UPDATE_PROPS`, `UPDATE_TEXT`, `INSERT_CHILD`, `REMOVE_CHILD`, `MOVE_CHILD` 지원
+- key 기반 자식 재정렬을 통해 이동 연산 처리
+- 필요한 부분만 실제 DOM에 반영
+
+### Effect / Memo 동작 검증
+
+- `useMemo`는 dependency가 바뀔 때만 재계산
+- `useEffect`는 commit 이후 실행
+- effect 재실행 전 cleanup 보장
+
+### Runtime Inspector
+
+- 현재 Hook 슬롯 상태를 요약해서 표시
+- 이전 값과 현재 값을 비교해 변경 여부 확인
+- 렌더 횟수와 최신 상태 흐름을 발표용으로 바로 설명 가능
+
+## 2. 데모 구성
+
+- 경로: `/`
+- 내용: Tic-Tac-Toe 게임 + Runtime Inspector
+- 목적: 상태 변경, 렌더링, Hook 저장 구조를 한 화면에서 설명
+
+## 3. 프로젝트 구조
+
+```text
+src/
+  demo/
+    main.js                # 메인 데모 진입점
+    runtime-inspector.js   # Hook 상태 시각화
+    styles.css             # 데모 UI 스타일
+  lib/
+    runtime.js             # FunctionComponent, Hooks, 스케줄링
+    vdom.js                # VDOM 생성, diff, patch
+  nonfiber/
+    index.js
+    runtime.js
+    vdom.js
+  nonfiber-demo/
+    main.js                # non-fiber 데모 진입점
+  tic-tac-toe/
+    model.js               # 게임 상태 전이/승패 계산
+tests/
+  runtime.test.js
+  vdom.test.js
+  tic-tac-toe-model.test.js
+docs/
+  sequence diagram.svg
+```
+
+## 4. 테스트 범위
+
+현재 테스트는 아래 항목을 검증합니다.
+
+- 루트 상태 저장 및 DOM 반영
+- 같은 이벤트 내 다중 `setState` batching
+- `useMemo` 재계산 조건
+- `useEffect` 실행 및 cleanup 순서
+- 자식 컴포넌트에서 Hook 사용 금지
+- Inspector snapshot 발행 여부
+- Virtual DOM diff / patch 동작
+- key 기반 자식 이동 처리
+- Tic-Tac-Toe 상태 전이와 점수 유지
+
+## 5. 실행 방법
 
 ```bash
 npm install
+npm run dev
 ```
 
-## 실행 명령어
+추가 명령어:
 
 ```bash
-npm run dev
 npm run build
 npm run test
 ```
-
-## 데모 페이지
-
-개발 서버 실행:
-
-```bash
-npm run dev
-```
-
-접속 경로:
-
-- `/`
-  - 메인 Tic-Tac-Toe 데모
-- `/nonfiber.html`
-  - non-fiber Tic-Tac-Toe 데모
-
-두 페이지 모두 아래 기능을 함께 제공합니다.
-
-- Hooks 동작 시각화 패널
-  - 루트 `hooks[]` 배열의 슬롯 번호, hook 종류, 현재 값 표시
-- 렌더링 흐름 추적 패널
-  - `setState -> scheduleUpdate -> update -> renderAndCommit -> diff -> patch -> effect` 순서 로그 표시
-
-## 런타임 설계 요약
-
-- 모든 hooks는 루트 `FunctionComponent`의 `hooks[]` 배열에 저장됩니다.
-- 자식 컴포넌트는 props만 받는 순수 함수형 컴포넌트입니다.
-- `setState`는 즉시 DOM을 바꾸지 않고 queue에 updater를 쌓습니다.
-- 여러 상태 변경은 microtask 하나로 모아서 처리됩니다.
-- `useMemo`는 dependency가 바뀔 때만 값을 다시 계산합니다.
-- `useEffect`는 DOM patch 이후 실행되고, 다시 실행되기 전에 이전 cleanup을 호출합니다.
-- DOM 갱신은 `patchDom(previousTree, nextTree)`를 통해 필요한 부분만 반영합니다.
-
-## 시연 포인트
-
-면접이나 발표에서 설명하기 좋은 포인트는 아래와 같습니다.
-
-- `hooks[]` 배열이 실제로 어떤 슬롯 구조를 갖는지 화면에서 바로 확인할 수 있습니다.
-- 한 번의 클릭이 런타임 내부에서 어떤 단계로 이어지는지 로그로 확인할 수 있습니다.
-- 메인 데모와 non-fiber 데모가 같은 루트 hooks 런타임을 공유합니다.
-- 게임 로직은 `model.js`로 분리되어 있어 UI와 상태 전이를 따로 설명할 수 있습니다.
-
-## 테스트
-
-현재 테스트는 다음 범위를 확인합니다.
-
-- 루트 상태 저장과 DOM 반영
-- batching 동작
-- `useMemo` 재계산 조건
-- `useEffect` 실행 및 cleanup 순서
-- 자식 컴포넌트에서 hooks 사용 금지
-- inspector snapshot에 hooks 슬롯 / 렌더링 흐름이 포함되는지 검증
-- Tic-Tac-Toe 상태 전이와 승패 계산 검증
-- Virtual DOM diff / patch 검증
