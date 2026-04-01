@@ -49,11 +49,6 @@ function App() {
         { class: 'hero-copy' },
         h('p', { class: 'eyebrow' }, '리액트 구현 데모'),
         h('h1', { class: 'hero-title' }, '틱택토 플레이그라운드'),
-        h(
-          'p',
-          { class: 'hero-description' },
-          '왼쪽 보드는 우리가 구현한 루트 상태 기반 앱이고, 오른쪽 패널은 hooks 슬롯을 실시간으로 보여줍니다.',
-        ),
       ),
     ),
     h(
@@ -102,7 +97,7 @@ function App() {
               onClick: () => setGame(createInitialGameState()),
               type: 'button',
             },
-            '점수까지 초기화',
+            '점수 초기화',
           ),
         ),
       ),

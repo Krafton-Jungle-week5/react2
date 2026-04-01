@@ -466,6 +466,7 @@ function createHookSnapshot(hook, index) {
       hook: 'useState',
       summary,
       detail: `latest: ${summary}, queue: ${hook.queue.length}`,
+      fields: createStateFields(hook.value),
     };
   }
 
@@ -476,6 +477,7 @@ function createHookSnapshot(hook, index) {
       hook: 'useMemo',
       summary,
       detail: `deps: ${summarizeDeps(hook.deps)}, result: ${summary}`,
+      fields: createMemoFields(hook.value),
     };
   }
 
@@ -484,7 +486,111 @@ function createHookSnapshot(hook, index) {
     hook: 'useEffect',
     summary: summarizeEffectDeps(hook.deps),
     detail: `deps: ${summarizeEffectDeps(hook.deps)}, cleanup: ${hook.cleanup ? 'yes' : 'no'}`,
+    fields: createEffectFields(hook.deps, hook.cleanup),
   };
+}
+
+function createStateFields(value) {
+  if (isGameState(value)) {
+    return [
+      { label: '현재 수', value: String(value.stepIndex) },
+      { label: '다음 턴', value: value.xIsNext ? 'X' : 'O' },
+      { label: 'X', value: String(value.score.x) },
+      { label: 'O', value: String(value.score.o) },
+      { label: '무승부', value: String(value.score.draws) },
+    ];
+  }
+
+  return [{ label: '값', value: summarizeValue(value) }];
+}
+
+function createMemoFields(value) {
+  if (isGameResult(value)) {
+    return [
+      { label: '승자', value: value.winner || '없음' },
+      { label: '무승부', value: value.isDraw ? '예' : '아니오' },
+      { label: '라인', value: value.winningLine.length ? value.winningLine.join('-') : '없음' },
+    ];
+  }
+
+  if (typeof value === 'string') {
+    return [{ label: '문구', value: summarizeStatusText(value) }];
+  }
+
+  if (typeof value === 'number') {
+    return [{ label: '값', value: String(value) }];
+  }
+
+  if (Array.isArray(value)) {
+    return [{ label: '배열', value: summarizeMemoValue(value) }];
+  }
+
+  return [{ label: '값', value: summarizeValue(value) }];
+}
+
+function createEffectFields(deps, cleanup) {
+  if (!Array.isArray(deps) || !deps.length) {
+    return [
+      { label: '의존성', value: '없음' },
+      { label: 'cleanup', value: cleanup ? '있음' : '없음' },
+    ];
+  }
+
+  return [
+    {
+      label: '의존성 1',
+      value: formatEffectDependency(deps[0], 0),
+    },
+    {
+      label: '의존성 2',
+      value: formatEffectDependency(deps[1], 1),
+    },
+    { label: 'cleanup', value: cleanup ? '있음' : '없음' },
+  ].filter((entry) => entry.value !== undefined);
+}
+
+function formatEffectDependency(value, index) {
+  if (index === 0 && typeof value === 'boolean') {
+    return value ? 'X 다음 턴' : 'O 다음 턴';
+  }
+
+  if (index === 1 && isGameResult(value)) {
+    if (value.winner) {
+      return `${value.winner} 승리`;
+    }
+
+    if (value.isDraw) {
+      return '무승부';
+    }
+
+    return '진행 중';
+  }
+
+  return summarizeMemoValue(value);
+}
+
+function summarizeStatusText(value) {
+  if (value.includes('X') && value.includes('차례')) {
+    return 'X 차례';
+  }
+
+  if (value.includes('O') && value.includes('차례')) {
+    return 'O 차례';
+  }
+
+  if (value.includes('X') && value.includes('승리')) {
+    return 'X 승리';
+  }
+
+  if (value.includes('O') && value.includes('승리')) {
+    return 'O 승리';
+  }
+
+  if (value.includes('무승부')) {
+    return '무승부';
+  }
+
+  return value;
 }
 
 function summarizePatchOperations(operations = []) {

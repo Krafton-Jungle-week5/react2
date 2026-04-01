@@ -26,27 +26,18 @@ export function createRuntimeInspectorStore() {
 
 export function mountRuntimeInspector(container, store) {
   function InspectorApp() {
-    const [viewState, setViewState] = useState(() => ({
-      current: store.getSnapshot(),
-      previousHooks: [],
-    }));
+    const [snapshot, setSnapshot] = useState(() => store.getSnapshot());
 
     useEffect(() => {
-      return store.subscribe((nextSnapshot) => {
-        setViewState((currentViewState) => ({
-          current: nextSnapshot,
-          previousHooks: currentViewState.current.hooks || [],
-        }));
-      });
+      return store.subscribe((nextSnapshot) => setSnapshot(nextSnapshot));
     }, []);
 
     return h(
       'section',
       { class: 'inspector-shell' },
       h(HookSlotsCard, {
-        hooks: viewState.current.hooks,
-        previousHooks: viewState.previousHooks,
-        renderCount: viewState.current.renderCount,
+        hooks: snapshot.hooks,
+        renderCount: snapshot.renderCount,
       }),
     );
   }
@@ -54,23 +45,12 @@ export function mountRuntimeInspector(container, store) {
   return new FunctionComponent(InspectorApp).mount(container);
 }
 
-function HookSlotsCard({ hooks, previousHooks, renderCount }) {
+function HookSlotsCard({ hooks, renderCount }) {
   const visibleSlots = hooks.filter((hook) => ![1, 2].includes(hook.slot));
-
-  const comparedHooks = visibleSlots.map((hook, index) => {
-    const previousHook = previousHooks.find((entry) => entry.slot === hook.slot);
-    const changed = !previousHook
-      || previousHook.summary !== hook.summary
-      || previousHook.detail !== hook.detail;
-
-    return {
-      ...hook,
-      displaySlot: index + 1,
-      previousSummary: previousHook?.summary || '이전 값 없음',
-      statusClassName: changed ? 'is-changed' : 'is-stable',
-      changed,
-    };
-  });
+  const comparedHooks = visibleSlots.map((hook, index) => ({
+    ...hook,
+    displaySlot: index + 1,
+  }));
 
   return h(
     'section',
@@ -80,11 +60,7 @@ function HookSlotsCard({ hooks, previousHooks, renderCount }) {
     h(
       'div',
       { class: 'hook-summary-card' },
-      h(
-        'p',
-        { class: 'timeline-detail inspector-meta' },
-        `루트 App 렌더 ${renderCount}회`,
-      ),
+      h('p', { class: 'timeline-detail inspector-meta' }, `루트 App 렌더 ${renderCount}회`),
     ),
     comparedHooks.length
       ? h(
@@ -94,7 +70,7 @@ function HookSlotsCard({ hooks, previousHooks, renderCount }) {
             h(
               'article',
               {
-                class: `hook-slot-card ${hook.statusClassName}`,
+                class: `hook-slot-card hook-slot-card--slot-${hook.displaySlot}`,
                 'data-key': `hook-slot-${hook.slot}`,
               },
               h(
@@ -103,13 +79,30 @@ function HookSlotsCard({ hooks, previousHooks, renderCount }) {
                 h('strong', { class: 'timeline-title' }, `슬롯 ${hook.displaySlot}`),
               ),
               h('p', { class: 'timeline-detail hook-kind' }, hook.hook),
-              h('p', { class: 'hook-label' }, '이전 값'),
-              h('p', { class: 'timeline-detail hook-before' }, hook.previousSummary),
               h('p', { class: 'hook-label' }, '현재 값'),
-              h('p', { class: 'timeline-detail hook-after' }, hook.summary),
+              renderHookFields(hook.fields, hook.summary, 'hook-after'),
             ),
           ),
         )
       : h('p', { class: 'timeline-detail' }, '아직 기록된 hook 슬롯이 없습니다.'),
+  );
+}
+
+function renderHookFields(fields, summary, className) {
+  if (!Array.isArray(fields) || !fields.length) {
+    return h('p', { class: `timeline-detail ${className}` }, summary);
+  }
+
+  return h(
+    'div',
+    { class: `hook-field-list ${className}` },
+    ...fields.map((field) =>
+      h(
+        'p',
+        { class: 'hook-field-row' },
+        h('span', { class: 'hook-field-label' }, `${field.label}`),
+        h('span', { class: 'hook-field-value' }, field.value),
+      ),
+    ),
   );
 }

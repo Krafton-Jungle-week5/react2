@@ -1,11 +1,11 @@
-import { createRootVNode as p, mountVNode as w, patchDom as S } from "./vdom.js";
-import { applyPatchOperations as Q, cloneVNode as U, countVNodeStats as G, diffTrees as X, domNodeToVNode as J, domNodeToVNodeTree as W, getVNodeKey as Y, parseHtmlToVNode as Z, removeDomAttribute as _, renderVNode as v, serializeVNodeToHtml as ee, setDomAttribute as te } from "./vdom.js";
+import { createRootVNode as g, mountVNode as $, patchDom as k } from "./vdom.js";
+import { applyPatchOperations as J, cloneVNode as W, countVNodeStats as Y, diffTrees as Z, domNodeToVNode as _, domNodeToVNodeTree as v, getVNodeKey as ee, parseHtmlToVNode as te, removeDomAttribute as ne, renderVNode as re, serializeVNodeToHtml as oe, setDomAttribute as ie } from "./vdom.js";
 let i = null;
-class T {
+class H {
   constructor(t, n = {}) {
     if (typeof t != "function")
       throw new TypeError("FunctionComponent must receive a function component.");
-    this.renderFn = t, this.props = n, this.hooks = [], this.hookIndex = 0, this.container = null, this.currentTree = p([]), this.pendingEffects = [], this.updateScheduled = !1, this.isMounted = !1, this.isRendering = !1, this.childRenderDepth = 0, this.renderCount = 0, this.inspector = null, this.debugFlow = [], this.lastPatchOperations = [], this.debugSnapshot = d(this);
+    this.renderFn = t, this.props = n, this.hooks = [], this.hookIndex = 0, this.container = null, this.currentTree = g([]), this.pendingEffects = [], this.updateScheduled = !1, this.isMounted = !1, this.isRendering = !1, this.childRenderDepth = 0, this.renderCount = 0, this.inspector = null, this.debugFlow = [], this.lastPatchOperations = [], this.debugSnapshot = h(this);
   }
   attachInspector(t) {
     return this.inspector = t, this.publishDebugSnapshot(), this;
@@ -32,7 +32,7 @@ class T {
       "scheduler",
       `${this.getComponentLabel()}.scheduleUpdate()`,
       "setState queued a root update and batched it into one microtask."
-    ), q(() => {
+    ), P(() => {
       this.updateScheduled = !1, this.update(this.props);
     }));
   }
@@ -57,18 +57,18 @@ class T {
     try {
       i = this;
       const r = this.renderFn(this.props);
-      n = $(r);
+      n = x(r);
     } finally {
       i = t, this.isRendering = !1;
     }
     if (!this.isMounted)
-      w(this.container, n), this.isMounted = !0, this.lastPatchOperations = [], this.recordDebugStep(
+      $(this.container, n), this.isMounted = !0, this.lastPatchOperations = [], this.recordDebugStep(
         "patch",
         "initial mount",
         "First render mounted the Virtual DOM tree into the real DOM."
       );
     else {
-      const r = S(this.container, this.currentTree, n);
+      const r = k(this.container, this.currentTree, n);
       this.lastPatchOperations = r, this.recordDebugStep(
         "diff",
         "diff",
@@ -76,7 +76,7 @@ class T {
       ), this.recordDebugStep(
         "patch",
         "patch",
-        g(r)
+        w(r)
       );
     }
     this.currentTree = n, this.renderCount += 1, this.publishDebugSnapshot(), this.flushEffects();
@@ -119,22 +119,22 @@ class T {
   }
   publishDebugSnapshot() {
     var t;
-    this.debugSnapshot = d(this), (t = this.inspector) != null && t.publish && this.inspector.publish(this.debugSnapshot);
+    this.debugSnapshot = h(this), (t = this.inspector) != null && t.publish && this.inspector.publish(this.debugSnapshot);
   }
   getComponentLabel() {
     return this.renderFn.name || "App";
   }
 }
-function I(e, t = {}, ...n) {
-  const r = E(n), o = {
+function X(e, t = {}, ...n) {
+  const r = A(n), o = {
     ...t || {},
     children: r
   };
   if (typeof e == "function") {
-    const y = i ? i.renderChildComponent(e, o) : e(o);
-    return C(y);
+    const D = i ? i.renderChildComponent(e, o) : e(o);
+    return O(D);
   }
-  const s = k(t);
+  const s = E(t);
   return {
     type: "element",
     tag: e,
@@ -142,13 +142,13 @@ function I(e, t = {}, ...n) {
     children: r
   };
 }
-function P(e) {
-  const t = f("useState"), n = a(t, "useState", "state", () => ({
+function B(e) {
+  const t = c("useState"), n = d(t, "useState", "state", () => ({
     kind: "state",
     queue: [],
-    value: O(e)
+    value: R(e)
   }));
-  A(n);
+  F(n);
   const r = (o) => {
     if (t.isRendering)
       throw new Error("setState must be called from an event or effect, not during render.");
@@ -160,50 +160,50 @@ function P(e) {
   };
   return [n.value, r];
 }
-function H(e, t) {
-  const n = f("useEffect"), r = n.hookIndex, o = a(n, "useEffect", "effect", () => ({
+function K(e, t) {
+  const n = c("useEffect"), r = n.hookIndex, o = d(n, "useEffect", "effect", () => ({
     kind: "effect",
     cleanup: null,
     deps: void 0
   }));
-  l(o.deps, t) && (n.recordDebugStep(
+  b(o.deps, t) && (n.recordDebugStep(
     "effect",
     `useEffect slot ${r}`,
     "Dependencies changed, so the effect callback was queued for after commit."
   ), n.pendingEffects.push({
     index: r,
     callback: e
-  }), o.deps = m(t));
+  }), o.deps = y(t));
 }
-function L(e, t) {
-  const n = f("useMemo"), r = a(n, "useMemo", "memo", () => ({
+function Q(e, t) {
+  const n = c("useMemo"), r = d(n, "useMemo", "memo", () => ({
     kind: "memo",
     deps: void 0,
     value: void 0
   }));
-  return l(r.deps, t) && (r.value = e(), r.deps = m(t), n.recordDebugStep(
+  return b(r.deps, t) && (r.value = e(), r.deps = y(t), n.recordDebugStep(
     "memo",
     `useMemo slot ${n.hooks.indexOf(r)}`,
-    `Recomputed the memoized value: ${c(r.value)}.`
+    `Recomputed the memoized value: ${u(r.value)}.`
   )), r.value;
 }
-function f(e) {
+function c(e) {
   if (!i || !i.isRendering)
     throw new Error(`${e} can only be used while FunctionComponent is rendering.`);
   if (i.childRenderDepth > 0)
     throw new Error(`${e} can only be used in the root component of this runtime.`);
   return i;
 }
-function D(e, t, n) {
+function C(e, t, n) {
   if (e.kind !== t)
     throw new Error(`${n} was called in a different order. Hooks must keep a stable call order.`);
 }
-function a(e, t, n, r) {
+function d(e, t, n, r) {
   const o = e.hookIndex++;
   let s = e.hooks[o];
-  return s || (s = r(), e.hooks[o] = s), D(s, n, t), s;
+  return s || (s = r(), e.hooks[o] = s), C(s, n, t), s;
 }
-function k(e = {}) {
+function E(e = {}) {
   const t = {};
   for (const [n, r] of Object.entries(e || {}))
     if (!(n === "children" || r === !1 || r == null)) {
@@ -219,19 +219,19 @@ function k(e = {}) {
     }
   return t;
 }
-function $(e) {
-  return p(u(e));
+function x(e) {
+  return g(f(e));
 }
-function C(e) {
-  const t = u(e);
+function O(e) {
+  const t = f(e);
   return t.length === 1 ? t[0] : t;
 }
-function E(e) {
-  return e.flatMap((t) => u(t));
+function A(e) {
+  return e.flatMap((t) => f(t));
 }
-function u(e) {
+function f(e) {
   if (Array.isArray(e))
-    return e.flatMap((t) => u(t));
+    return e.flatMap((t) => f(t));
   if (e == null || typeof e == "boolean")
     return [];
   if (typeof e == "string" || typeof e == "number")
@@ -241,23 +241,23 @@ function u(e) {
         value: String(e)
       }
     ];
-  if (x(e))
+  if (M(e))
     return e.type === "root" ? e.children || [] : [e];
   throw new TypeError("Components may only return Virtual DOM nodes, strings, numbers, or arrays.");
 }
-function x(e) {
+function M(e) {
   return !!e && typeof e == "object" && typeof e.type == "string";
 }
-function l(e, t) {
+function b(e, t) {
   return t === void 0 || e === void 0 || e.length !== t.length ? !0 : t.some((n, r) => !Object.is(n, e[r]));
 }
-function m(e) {
+function y(e) {
   return Array.isArray(e) ? [...e] : void 0;
 }
-function O(e) {
+function R(e) {
   return typeof e == "function" ? e() : e;
 }
-function A(e) {
+function F(e) {
   if (!e.queue.length)
     return;
   let t = e.value;
@@ -265,71 +265,107 @@ function A(e) {
     t = typeof n == "function" ? n(t) : n;
   e.queue = [], e.value = t;
 }
-function d(e) {
+function h(e) {
   return {
     renderCount: e.renderCount,
-    hooks: e.hooks.map((t, n) => R(t, n)),
-    flow: M(e.debugFlow),
-    patchSummary: g(e.lastPatchOperations)
+    hooks: e.hooks.map((t, n) => N(t, n)),
+    flow: q(e.debugFlow),
+    patchSummary: w(e.lastPatchOperations)
   };
 }
-function R(e, t) {
+function N(e, t) {
   if (e.kind === "state") {
-    const n = N(e.value);
+    const n = T(e.value);
     return {
       slot: t,
       hook: "useState",
       summary: n,
-      detail: `latest: ${n}, queue: ${e.queue.length}`
+      detail: `latest: ${n}, queue: ${e.queue.length}`,
+      fields: V(e.value)
     };
   }
   if (e.kind === "memo") {
-    const n = b(e.value);
+    const n = a(e.value);
     return {
       slot: t,
       hook: "useMemo",
       summary: n,
-      detail: `deps: ${V(e.deps)}, result: ${n}`
+      detail: `deps: ${I(e.deps)}, result: ${n}`,
+      fields: z(e.value)
     };
   }
   return {
     slot: t,
     hook: "useEffect",
-    summary: h(e.deps),
-    detail: `deps: ${h(e.deps)}, cleanup: ${e.cleanup ? "yes" : "no"}`
+    summary: m(e.deps),
+    detail: `deps: ${m(e.deps)}, cleanup: ${e.cleanup ? "yes" : "no"}`,
+    fields: j(e.deps, e.cleanup)
   };
 }
-function g(e = []) {
+function V(e) {
+  return S(e) ? [
+    { label: "현재 수", value: String(e.stepIndex) },
+    { label: "다음 턴", value: e.xIsNext ? "X" : "O" },
+    { label: "점수", value: `X:${e.score.x} O:${e.score.o} D:${e.score.draws}` }
+  ] : [{ label: "값", value: u(e) }];
+}
+function z(e) {
+  return l(e) ? [
+    { label: "승자", value: e.winner || "없음" },
+    { label: "무승부", value: e.isDraw ? "예" : "아니오" },
+    { label: "라인", value: e.winningLine.length ? e.winningLine.join("-") : "없음" }
+  ] : typeof e == "string" ? [{ label: "문구", value: e }] : typeof e == "number" ? [{ label: "값", value: String(e) }] : Array.isArray(e) ? [{ label: "배열", value: a(e) }] : [{ label: "값", value: u(e) }];
+}
+function j(e, t) {
+  return !Array.isArray(e) || !e.length ? [
+    { label: "의존성", value: "없음" },
+    { label: "cleanup", value: t ? "있음" : "없음" }
+  ] : [
+    {
+      label: "의존성 1",
+      value: p(e[0], 0)
+    },
+    {
+      label: "의존성 2",
+      value: p(e[1], 1)
+    },
+    { label: "cleanup", value: t ? "있음" : "없음" }
+  ].filter((n) => n.value !== void 0);
+}
+function p(e, t) {
+  return t === 0 && typeof e == "boolean" ? e ? "X 다음 턴" : "O 다음 턴" : t === 1 && l(e) ? e.winner ? `${e.winner} 승리` : e.isDraw ? "무승부" : "진행 중" : a(e);
+}
+function w(e = []) {
   if (!e.length)
     return "no patch operations";
   const t = e.reduce((n, r) => (n[r.type] = (n[r.type] || 0) + 1, n), {});
   return Object.entries(t).map(([n, r]) => `${n} ${r}`).join(", ");
 }
-function M(e) {
+function q(e) {
   return e.length ? ["state", "scheduler", "render", "memo", "diff", "patch", "effect"].map((n) => e.filter((r) => r.kind === n).at(-1)).filter(Boolean) : [];
 }
-function V(e) {
-  return Array.isArray(e) ? e.map((t) => c(t)).join(", ") : "none";
+function I(e) {
+  return Array.isArray(e) ? e.map((t) => u(t)).join(", ") : "none";
 }
-function c(e) {
+function u(e) {
   return typeof e == "string" ? e : typeof e == "number" || typeof e == "boolean" || e == null ? String(e) : JSON.stringify(e);
 }
-function b(e) {
-  return z(e) ? e.winner ? `winner ${e.winner} / line ${e.winningLine.join("-")}` : e.isDraw ? "draw" : "winner none / draw no" : Array.isArray(e) ? e.length <= 9 && e.every((t) => typeof t == "string") ? e.map((t) => t || "-").join(" ") : `array(${e.length})` : c(e);
+function a(e) {
+  return l(e) ? e.winner ? `winner ${e.winner} / line ${e.winningLine.join("-")}` : e.isDraw ? "draw" : "winner none / draw no" : Array.isArray(e) ? e.length <= 9 && e.every((t) => typeof t == "string") ? e.map((t) => t || "-").join(" ") : `array(${e.length})` : u(e);
 }
-function h(e) {
-  return !Array.isArray(e) || !e.length ? "effect idle" : e.map((t) => b(t)).join(" / ");
+function m(e) {
+  return !Array.isArray(e) || !e.length ? "effect idle" : e.map((t) => a(t)).join(" / ");
 }
-function N(e) {
-  return F(e) ? `step ${e.stepIndex} / next ${e.xIsNext ? "X" : "O"} / X:${e.score.x} O:${e.score.o} D:${e.score.draws}` : c(e);
+function T(e) {
+  return S(e) ? `step ${e.stepIndex} / next ${e.xIsNext ? "X" : "O"} / X:${e.score.x} O:${e.score.o} D:${e.score.draws}` : u(e);
 }
-function F(e) {
+function S(e) {
   return !!(e && typeof e == "object" && Array.isArray(e.history) && typeof e.stepIndex == "number" && typeof e.xIsNext == "boolean" && e.score && typeof e.score.x == "number" && typeof e.score.o == "number" && typeof e.score.draws == "number");
 }
-function z(e) {
+function l(e) {
   return !!(e && typeof e == "object" && "winner" in e && "winningLine" in e && "isDraw" in e);
 }
-function q(e) {
+function P(e) {
   if (typeof queueMicrotask == "function") {
     queueMicrotask(e);
     return;
@@ -337,24 +373,24 @@ function q(e) {
   Promise.resolve().then(e);
 }
 export {
-  T as FunctionComponent,
-  Q as applyPatchOperations,
-  U as cloneVNode,
-  G as countVNodeStats,
-  p as createRootVNode,
-  X as diffTrees,
-  J as domNodeToVNode,
-  W as domNodeToVNodeTree,
-  Y as getVNodeKey,
-  I as h,
-  w as mountVNode,
-  Z as parseHtmlToVNode,
-  S as patchDom,
-  _ as removeDomAttribute,
-  v as renderVNode,
-  ee as serializeVNodeToHtml,
-  te as setDomAttribute,
-  H as useEffect,
-  L as useMemo,
-  P as useState
+  H as FunctionComponent,
+  J as applyPatchOperations,
+  W as cloneVNode,
+  Y as countVNodeStats,
+  g as createRootVNode,
+  Z as diffTrees,
+  _ as domNodeToVNode,
+  v as domNodeToVNodeTree,
+  ee as getVNodeKey,
+  X as h,
+  $ as mountVNode,
+  te as parseHtmlToVNode,
+  k as patchDom,
+  ne as removeDomAttribute,
+  re as renderVNode,
+  oe as serializeVNodeToHtml,
+  ie as setDomAttribute,
+  K as useEffect,
+  Q as useMemo,
+  B as useState
 };

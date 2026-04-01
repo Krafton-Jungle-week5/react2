@@ -1,7 +1,8 @@
 :root {
   color: #ecf4ff;
   font-family: "Space Grotesk", "Segoe UI", sans-serif;
-  line-height: 1.5;
+  line-height: 1.55;
+  font-size: 17px;
   background:
     radial-gradient(circle at top left, rgba(255, 183, 3, 0.2), transparent 24%),
     radial-gradient(circle at top right, rgba(114, 221, 247, 0.14), transparent 28%),
@@ -62,7 +63,7 @@ button {
 .panel-kicker {
   margin: 0 0 10px;
   color: #ffb703;
-  font-size: 0.8rem;
+  font-size: 1.02rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -75,6 +76,11 @@ button {
   letter-spacing: -0.03em;
 }
 
+.section-title {
+  font-size: clamp(1.85rem, 2.15vw, 2.2rem);
+  line-height: 1.08;
+}
+
 .hero-title {
   font-size: clamp(2.2rem, 4vw, 4rem);
   line-height: 0.98;
@@ -85,6 +91,7 @@ button {
 .score-label,
 .timeline-detail {
   color: #9db0cf;
+  font-size: 1.02rem;
 }
 
 .move-pill {
@@ -93,10 +100,11 @@ button {
   justify-content: center;
   gap: 10px;
   width: fit-content;
-  padding: 10px 16px;
+  padding: 11px 18px;
   border-radius: 999px;
   font-weight: 700;
   letter-spacing: 0.08em;
+  font-size: 1rem;
 }
 
 .game-layout {
@@ -111,6 +119,7 @@ button {
   padding: 24px;
   display: flex;
   flex-direction: column;
+  gap: 16px;
   overflow: hidden;
 }
 
@@ -129,13 +138,13 @@ button {
 }
 
 .board-grid {
-  flex: 1;
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 0;
   align-self: center;
-  width: min(100%, calc(100vh - 360px));
+  width: min(100%, calc(100vh - 430px));
   max-width: none;
 }
 
@@ -173,7 +182,7 @@ button {
 }
 
 .button-row {
-  margin-top: 18px;
+  margin-top: auto;
   justify-content: flex-start;
   flex-wrap: wrap;
 }
@@ -184,7 +193,8 @@ button {
   border-radius: 999px;
   cursor: pointer;
   transition: transform 140ms ease, background 140ms ease;
-  padding: 12px 18px;
+  padding: 13px 20px;
+  font-size: 1rem;
 }
 
 .primary-button {
@@ -224,10 +234,13 @@ button {
 
 .history-title {
   margin-bottom: 10px;
+  font-size: clamp(2.05rem, 2.2vw, 2.35rem);
+  line-height: 1.08;
 }
 
 .inspector-meta {
   margin: 0 0 12px;
+  font-size: 1rem;
 }
 
 .hook-summary-card {
@@ -242,6 +255,10 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.hook-slot-card--slot-3 {
+  grid-column: 1 / -1;
 }
 
 .inspector-panel {
@@ -318,14 +335,14 @@ button {
 .hook-kind {
   margin-bottom: 4px;
   color: #72ddf7;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
 .hook-label {
   margin: 10px 0 4px;
   color: #9db0cf;
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -339,6 +356,61 @@ button {
   font-weight: 700;
 }
 
+.hook-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hook-field-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.hook-field-label {
+  color: #8ca0c0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hook-field-value {
+  min-width: 0;
+  font-size: 0.94rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.hook-slot-card--slot-1 .hook-field-row {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
+.hook-slot-card--slot-2 .hook-field-row,
+.hook-slot-card--slot-3 .hook-field-row {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.hook-slot-card--slot-2 .hook-field-value,
+.hook-slot-card--slot-3 .hook-field-value {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.hook-before .hook-field-value {
+  color: #8ca0c0;
+}
+
+.hook-after .hook-field-value {
+  color: #ecf4ff;
+  font-weight: 700;
+}
+
 .timeline-title {
   display: block;
   margin-bottom: 6px;
@@ -348,7 +420,7 @@ button {
 
 .timeline-detail {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 1rem;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
