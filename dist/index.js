@@ -1,6 +1,6 @@
 import { createRootVNode as g, mountVNode as $, patchDom as k } from "./vdom.js";
-import { applyPatchOperations as J, cloneVNode as W, countVNodeStats as Y, diffTrees as Z, domNodeToVNode as _, domNodeToVNodeTree as v, getVNodeKey as ee, parseHtmlToVNode as te, removeDomAttribute as ne, renderVNode as re, serializeVNodeToHtml as oe, setDomAttribute as ie } from "./vdom.js";
-let i = null;
+import { applyPatchOperations as W, cloneVNode as Y, countVNodeStats as Z, diffTrees as _, domNodeToVNode as v, domNodeToVNodeTree as ee, getVNodeKey as te, parseHtmlToVNode as ne, removeDomAttribute as re, renderVNode as ie, serializeVNodeToHtml as oe, setDomAttribute as se } from "./vdom.js";
+let o = null;
 class H {
   constructor(t, n = {}) {
     if (typeof t != "function")
@@ -32,7 +32,7 @@ class H {
       "scheduler",
       `${this.getComponentLabel()}.scheduleUpdate()`,
       "setState queued a root update and batched it into one microtask."
-    ), P(() => {
+    ), L(() => {
       this.updateScheduled = !1, this.update(this.props);
     }));
   }
@@ -52,14 +52,14 @@ class H {
       `${this.getComponentLabel()}.renderAndCommit()`,
       "Root component is rerendering from hook slot 0."
     );
-    const t = i;
+    const t = o;
     let n;
     try {
-      i = this;
+      o = this;
       const r = this.renderFn(this.props);
-      n = x(r);
+      n = C(r);
     } finally {
-      i = t, this.isRendering = !1;
+      o = t, this.isRendering = !1;
     }
     if (!this.isMounted)
       $(this.container, n), this.isMounted = !0, this.lastPatchOperations = [], this.recordDebugStep(
@@ -99,8 +99,8 @@ class H {
         `useEffect slot ${n.index}`,
         "Running the latest effect callback because dependencies changed."
       );
-      const o = n.callback();
-      r.cleanup = typeof o == "function" ? o : null, this.publishDebugSnapshot();
+      const i = n.callback();
+      r.cleanup = typeof i == "function" ? i : null, this.publishDebugSnapshot();
     }
   }
   resetDebugFlow() {
@@ -125,16 +125,16 @@ class H {
     return this.renderFn.name || "App";
   }
 }
-function X(e, t = {}, ...n) {
-  const r = A(n), o = {
+function B(e, t = {}, ...n) {
+  const r = A(n), i = {
     ...t || {},
     children: r
   };
   if (typeof e == "function") {
-    const D = i ? i.renderChildComponent(e, o) : e(o);
-    return O(D);
+    const D = o ? o.renderChildComponent(e, i) : e(i);
+    return E(D);
   }
-  const s = E(t);
+  const s = x(t);
   return {
     type: "element",
     tag: e,
@@ -142,17 +142,17 @@ function X(e, t = {}, ...n) {
     children: r
   };
 }
-function B(e) {
-  const t = c("useState"), n = d(t, "useState", "state", () => ({
+function K(e) {
+  const t = a("useState"), n = d(t, "useState", "state", () => ({
     kind: "state",
     queue: [],
     value: R(e)
   }));
   F(n);
-  const r = (o) => {
+  const r = (i) => {
     if (t.isRendering)
       throw new Error("setState must be called from an event or effect, not during render.");
-    t.updateScheduled || t.resetDebugFlow(), n.queue.push(o), t.recordDebugStep(
+    t.updateScheduled || t.resetDebugFlow(), n.queue.push(i), t.recordDebugStep(
       "state",
       `useState slot ${t.hooks.indexOf(n)}`,
       `Queued the latest root state update. Pending queue length: ${n.queue.length}.`
@@ -160,23 +160,23 @@ function B(e) {
   };
   return [n.value, r];
 }
-function K(e, t) {
-  const n = c("useEffect"), r = n.hookIndex, o = d(n, "useEffect", "effect", () => ({
+function Q(e, t) {
+  const n = a("useEffect"), r = n.hookIndex, i = d(n, "useEffect", "effect", () => ({
     kind: "effect",
     cleanup: null,
     deps: void 0
   }));
-  b(o.deps, t) && (n.recordDebugStep(
+  b(i.deps, t) && (n.recordDebugStep(
     "effect",
     `useEffect slot ${r}`,
     "Dependencies changed, so the effect callback was queued for after commit."
   ), n.pendingEffects.push({
     index: r,
     callback: e
-  }), o.deps = y(t));
+  }), i.deps = y(t));
 }
-function Q(e, t) {
-  const n = c("useMemo"), r = d(n, "useMemo", "memo", () => ({
+function U(e, t) {
+  const n = a("useMemo"), r = d(n, "useMemo", "memo", () => ({
     kind: "memo",
     deps: void 0,
     value: void 0
@@ -187,23 +187,23 @@ function Q(e, t) {
     `Recomputed the memoized value: ${u(r.value)}.`
   )), r.value;
 }
-function c(e) {
-  if (!i || !i.isRendering)
+function a(e) {
+  if (!o || !o.isRendering)
     throw new Error(`${e} can only be used while FunctionComponent is rendering.`);
-  if (i.childRenderDepth > 0)
+  if (o.childRenderDepth > 0)
     throw new Error(`${e} can only be used in the root component of this runtime.`);
-  return i;
+  return o;
 }
-function C(e, t, n) {
+function O(e, t, n) {
   if (e.kind !== t)
     throw new Error(`${n} was called in a different order. Hooks must keep a stable call order.`);
 }
 function d(e, t, n, r) {
-  const o = e.hookIndex++;
-  let s = e.hooks[o];
-  return s || (s = r(), e.hooks[o] = s), C(s, n, t), s;
+  const i = e.hookIndex++;
+  let s = e.hooks[i];
+  return s || (s = r(), e.hooks[i] = s), O(s, n, t), s;
 }
-function E(e = {}) {
+function x(e = {}) {
   const t = {};
   for (const [n, r] of Object.entries(e || {}))
     if (!(n === "children" || r === !1 || r == null)) {
@@ -219,10 +219,10 @@ function E(e = {}) {
     }
   return t;
 }
-function x(e) {
+function C(e) {
   return g(f(e));
 }
-function O(e) {
+function E(e) {
   const t = f(e);
   return t.length === 1 ? t[0] : t;
 }
@@ -269,13 +269,13 @@ function h(e) {
   return {
     renderCount: e.renderCount,
     hooks: e.hooks.map((t, n) => N(t, n)),
-    flow: q(e.debugFlow),
+    flow: T(e.debugFlow),
     patchSummary: w(e.lastPatchOperations)
   };
 }
 function N(e, t) {
   if (e.kind === "state") {
-    const n = T(e.value);
+    const n = P(e.value);
     return {
       slot: t,
       hook: "useState",
@@ -285,7 +285,7 @@ function N(e, t) {
     };
   }
   if (e.kind === "memo") {
-    const n = a(e.value);
+    const n = c(e.value);
     return {
       slot: t,
       hook: "useMemo",
@@ -306,7 +306,9 @@ function V(e) {
   return S(e) ? [
     { label: "현재 수", value: String(e.stepIndex) },
     { label: "다음 턴", value: e.xIsNext ? "X" : "O" },
-    { label: "점수", value: `X:${e.score.x} O:${e.score.o} D:${e.score.draws}` }
+    { label: "X", value: String(e.score.x) },
+    { label: "O", value: String(e.score.o) },
+    { label: "무승부", value: String(e.score.draws) }
   ] : [{ label: "값", value: u(e) }];
 }
 function z(e) {
@@ -314,7 +316,7 @@ function z(e) {
     { label: "승자", value: e.winner || "없음" },
     { label: "무승부", value: e.isDraw ? "예" : "아니오" },
     { label: "라인", value: e.winningLine.length ? e.winningLine.join("-") : "없음" }
-  ] : typeof e == "string" ? [{ label: "문구", value: e }] : typeof e == "number" ? [{ label: "값", value: String(e) }] : Array.isArray(e) ? [{ label: "배열", value: a(e) }] : [{ label: "값", value: u(e) }];
+  ] : typeof e == "string" ? [{ label: "문구", value: q(e) }] : typeof e == "number" ? [{ label: "값", value: String(e) }] : Array.isArray(e) ? [{ label: "배열", value: c(e) }] : [{ label: "값", value: u(e) }];
 }
 function j(e, t) {
   return !Array.isArray(e) || !e.length ? [
@@ -333,7 +335,10 @@ function j(e, t) {
   ].filter((n) => n.value !== void 0);
 }
 function p(e, t) {
-  return t === 0 && typeof e == "boolean" ? e ? "X 다음 턴" : "O 다음 턴" : t === 1 && l(e) ? e.winner ? `${e.winner} 승리` : e.isDraw ? "무승부" : "진행 중" : a(e);
+  return t === 0 && typeof e == "boolean" ? e ? "X 다음 턴" : "O 다음 턴" : t === 1 && l(e) ? e.winner ? `${e.winner} 승리` : e.isDraw ? "무승부" : "진행 중" : c(e);
+}
+function q(e) {
+  return e.includes("X") && e.includes("차례") ? "X 차례" : e.includes("O") && e.includes("차례") ? "O 차례" : e.includes("X") && e.includes("승리") ? "X 승리" : e.includes("O") && e.includes("승리") ? "O 승리" : e.includes("무승부") ? "무승부" : e;
 }
 function w(e = []) {
   if (!e.length)
@@ -341,7 +346,7 @@ function w(e = []) {
   const t = e.reduce((n, r) => (n[r.type] = (n[r.type] || 0) + 1, n), {});
   return Object.entries(t).map(([n, r]) => `${n} ${r}`).join(", ");
 }
-function q(e) {
+function T(e) {
   return e.length ? ["state", "scheduler", "render", "memo", "diff", "patch", "effect"].map((n) => e.filter((r) => r.kind === n).at(-1)).filter(Boolean) : [];
 }
 function I(e) {
@@ -350,13 +355,13 @@ function I(e) {
 function u(e) {
   return typeof e == "string" ? e : typeof e == "number" || typeof e == "boolean" || e == null ? String(e) : JSON.stringify(e);
 }
-function a(e) {
+function c(e) {
   return l(e) ? e.winner ? `winner ${e.winner} / line ${e.winningLine.join("-")}` : e.isDraw ? "draw" : "winner none / draw no" : Array.isArray(e) ? e.length <= 9 && e.every((t) => typeof t == "string") ? e.map((t) => t || "-").join(" ") : `array(${e.length})` : u(e);
 }
 function m(e) {
-  return !Array.isArray(e) || !e.length ? "effect idle" : e.map((t) => a(t)).join(" / ");
+  return !Array.isArray(e) || !e.length ? "effect idle" : e.map((t) => c(t)).join(" / ");
 }
-function T(e) {
+function P(e) {
   return S(e) ? `step ${e.stepIndex} / next ${e.xIsNext ? "X" : "O"} / X:${e.score.x} O:${e.score.o} D:${e.score.draws}` : u(e);
 }
 function S(e) {
@@ -365,7 +370,7 @@ function S(e) {
 function l(e) {
   return !!(e && typeof e == "object" && "winner" in e && "winningLine" in e && "isDraw" in e);
 }
-function P(e) {
+function L(e) {
   if (typeof queueMicrotask == "function") {
     queueMicrotask(e);
     return;
@@ -374,23 +379,23 @@ function P(e) {
 }
 export {
   H as FunctionComponent,
-  J as applyPatchOperations,
-  W as cloneVNode,
-  Y as countVNodeStats,
+  W as applyPatchOperations,
+  Y as cloneVNode,
+  Z as countVNodeStats,
   g as createRootVNode,
-  Z as diffTrees,
-  _ as domNodeToVNode,
-  v as domNodeToVNodeTree,
-  ee as getVNodeKey,
-  X as h,
+  _ as diffTrees,
+  v as domNodeToVNode,
+  ee as domNodeToVNodeTree,
+  te as getVNodeKey,
+  B as h,
   $ as mountVNode,
-  te as parseHtmlToVNode,
+  ne as parseHtmlToVNode,
   k as patchDom,
-  ne as removeDomAttribute,
-  re as renderVNode,
+  re as removeDomAttribute,
+  ie as renderVNode,
   oe as serializeVNodeToHtml,
-  ie as setDomAttribute,
-  K as useEffect,
-  Q as useMemo,
-  B as useState
+  se as setDomAttribute,
+  Q as useEffect,
+  U as useMemo,
+  K as useState
 };
