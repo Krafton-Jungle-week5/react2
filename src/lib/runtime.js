@@ -54,8 +54,8 @@ export class FunctionComponent {
     this.props = nextProps;
     this.recordDebugStep(
       'scheduler',
-      `${this.getComponentLabel()}.update() 실행`,
-      '예약된 microtask가 실행되면서 루트 컴포넌트가 다시 렌더링을 시작합니다.',
+      `${this.getComponentLabel()}.update()`,
+      'Reserved microtask is now flushing the pending root update.',
     );
     this.renderAndCommit();
     return this;
@@ -69,9 +69,10 @@ export class FunctionComponent {
     this.updateScheduled = true;
     this.recordDebugStep(
       'scheduler',
-      `${this.getComponentLabel()}.scheduleUpdate() 예약`,
-      'setState가 만든 변경을 한 번의 microtask로 모아서 처리합니다.',
+      `${this.getComponentLabel()}.scheduleUpdate()`,
+      'setState queued a root update and batched it into one microtask.',
     );
+
     scheduleMicrotask(() => {
       this.updateScheduled = false;
       this.update(this.props);
@@ -98,8 +99,8 @@ export class FunctionComponent {
     this.isRendering = true;
     this.recordDebugStep(
       'render',
-      `${this.getComponentLabel()}.renderAndCommit() 시작`,
-      'hookIndex를 0으로 되돌리고 루트 함수형 컴포넌트를 다시 실행합니다.',
+      `${this.getComponentLabel()}.renderAndCommit()`,
+      'Root component is rerendering from hook slot 0.',
     );
 
     const previousComponent = activeComponent;
@@ -120,20 +121,20 @@ export class FunctionComponent {
       this.lastPatchOperations = [];
       this.recordDebugStep(
         'patch',
-        '초기 마운트',
-        '첫 렌더에서는 이전 트리가 없어서 Virtual DOM을 그대로 실제 DOM에 마운트합니다.',
+        'initial mount',
+        'First render mounted the Virtual DOM tree into the real DOM.',
       );
     } else {
       const operations = patchDom(this.container, this.currentTree, nextTree);
       this.lastPatchOperations = operations;
       this.recordDebugStep(
         'diff',
-        'diff 단계 완료',
-        `이전 트리와 새 트리를 비교해서 ${operations.length}개의 패치 작업을 찾았습니다.`,
+        'diff',
+        `Compared previous and next Virtual DOM trees and found ${operations.length} patch operations.`,
       );
       this.recordDebugStep(
         'patch',
-        'patch 단계 완료',
+        'patch',
         summarizePatchOperations(operations),
       );
     }
@@ -151,8 +152,8 @@ export class FunctionComponent {
     if (effectQueue.length) {
       this.recordDebugStep(
         'effect',
-        'flushEffects() 실행',
-        `${effectQueue.length}개의 useEffect callback을 커밋 이후 순서대로 실행합니다.`,
+        'flushEffects()',
+        `Running ${effectQueue.length} useEffect callback(s) after commit.`,
       );
     }
 
@@ -162,16 +163,16 @@ export class FunctionComponent {
       if (typeof hook.cleanup === 'function') {
         this.recordDebugStep(
           'effect',
-          `useEffect 슬롯 ${entry.index} cleanup`,
-          '이전 effect가 남긴 cleanup 함수를 먼저 실행합니다.',
+          `useEffect slot ${entry.index} cleanup`,
+          'Running the previous cleanup before the next effect callback.',
         );
         hook.cleanup();
       }
 
       this.recordDebugStep(
         'effect',
-        `useEffect 슬롯 ${entry.index} 실행`,
-        '의존성이 변경된 effect callback을 실행합니다.',
+        `useEffect slot ${entry.index}`,
+        'Running the latest effect callback because dependencies changed.',
       );
       const cleanup = entry.callback();
       hook.cleanup = typeof cleanup === 'function' ? cleanup : null;
@@ -237,16 +238,11 @@ export function h(type, props = {}, ...children) {
 
 export function useState(initialValue) {
   const component = assertHookAccess('useState');
-  const hook = getHook(
-    component,
-    'useState',
-    'state',
-    () => ({
-      kind: 'state',
-      queue: [],
-      value: resolveInitialValue(initialValue),
-    }),
-  );
+  const hook = getHook(component, 'useState', 'state', () => ({
+    kind: 'state',
+    queue: [],
+    value: resolveInitialValue(initialValue),
+  }));
 
   flushStateQueue(hook);
 
@@ -262,8 +258,8 @@ export function useState(initialValue) {
     hook.queue.push(nextValue);
     component.recordDebugStep(
       'state',
-      `useState 슬롯 ${component.hooks.indexOf(hook)} queue 적재`,
-      `루트 ${component.getComponentLabel()}의 useState가 다음 값을 큐에 넣었습니다. 현재 대기 중인 업데이트 수는 ${hook.queue.length}개입니다.`,
+      `useState slot ${component.hooks.indexOf(hook)}`,
+      `Queued the latest root state update. Pending queue length: ${hook.queue.length}.`,
     );
     component.scheduleUpdate();
   };
@@ -274,22 +270,17 @@ export function useState(initialValue) {
 export function useEffect(callback, deps) {
   const component = assertHookAccess('useEffect');
   const index = component.hookIndex;
-  const hook = getHook(
-    component,
-    'useEffect',
-    'effect',
-    () => ({
-      kind: 'effect',
-      cleanup: null,
-      deps: undefined,
-    }),
-  );
+  const hook = getHook(component, 'useEffect', 'effect', () => ({
+    kind: 'effect',
+    cleanup: null,
+    deps: undefined,
+  }));
 
   if (shouldRunHook(hook.deps, deps)) {
     component.recordDebugStep(
       'effect',
-      `useEffect 슬롯 ${index} 등록`,
-      '의존성이 바뀌어서 이번 커밋 이후 effect callback이 실행되도록 예약했습니다.',
+      `useEffect slot ${index}`,
+      'Dependencies changed, so the effect callback was queued for after commit.',
     );
     component.pendingEffects.push({
       index,
@@ -301,24 +292,19 @@ export function useEffect(callback, deps) {
 
 export function useMemo(factory, deps) {
   const component = assertHookAccess('useMemo');
-  const hook = getHook(
-    component,
-    'useMemo',
-    'memo',
-    () => ({
-      kind: 'memo',
-      deps: undefined,
-      value: undefined,
-    }),
-  );
+  const hook = getHook(component, 'useMemo', 'memo', () => ({
+    kind: 'memo',
+    deps: undefined,
+    value: undefined,
+  }));
 
   if (shouldRunHook(hook.deps, deps)) {
     hook.value = factory();
     hook.deps = cloneDeps(deps);
     component.recordDebugStep(
       'memo',
-      `useMemo 슬롯 ${component.hooks.indexOf(hook)} 재계산`,
-      `의존성이 바뀌어서 memo 값을 다시 계산했습니다. 현재 값: ${summarizeValue(hook.value)}.`,
+      `useMemo slot ${component.hooks.indexOf(hook)}`,
+      `Recomputed the memoized value: ${summarizeValue(hook.value)}.`,
     );
   }
 
@@ -466,41 +452,44 @@ function createDebugSnapshot(component) {
   return {
     renderCount: component.renderCount,
     hooks: component.hooks.map((hook, index) => createHookSnapshot(hook, index)),
-    flow: component.debugFlow,
+    flow: summarizeFlow(component.debugFlow),
     patchSummary: summarizePatchOperations(component.lastPatchOperations),
   };
 }
 
 function createHookSnapshot(hook, index) {
   if (hook.kind === 'state') {
+    const summary = summarizeStateValue(hook.value);
+
     return {
       slot: index,
       hook: 'useState',
-      summary: summarizeValue(hook.value),
-      detail: `현재 값: ${summarizeValue(hook.value)}, 대기 중 queue: ${hook.queue.length}개`,
+      summary,
+      detail: `latest: ${summary}, queue: ${hook.queue.length}`,
     };
   }
 
   if (hook.kind === 'memo') {
+    const summary = summarizeMemoValue(hook.value);
     return {
       slot: index,
       hook: 'useMemo',
-      summary: summarizeValue(hook.value),
-      detail: `deps: ${summarizeDeps(hook.deps)}, 계산 결과: ${summarizeValue(hook.value)}`,
+      summary,
+      detail: `deps: ${summarizeDeps(hook.deps)}, result: ${summary}`,
     };
   }
 
   return {
     slot: index,
     hook: 'useEffect',
-    summary: hook.cleanup ? 'cleanup 보유' : 'cleanup 없음',
-    detail: `deps: ${summarizeDeps(hook.deps)}, cleanup: ${hook.cleanup ? '있음' : '없음'}`,
+    summary: summarizeEffectDeps(hook.deps),
+    detail: `deps: ${summarizeEffectDeps(hook.deps)}, cleanup: ${hook.cleanup ? 'yes' : 'no'}`,
   };
 }
 
 function summarizePatchOperations(operations = []) {
   if (!operations.length) {
-    return '적용할 patch 작업이 없었습니다.';
+    return 'no patch operations';
   }
 
   const counts = operations.reduce((map, operation) => {
@@ -509,13 +498,25 @@ function summarizePatchOperations(operations = []) {
   }, {});
 
   return Object.entries(counts)
-    .map(([type, count]) => `${type} ${count}개`)
+    .map(([type, count]) => `${type} ${count}`)
     .join(', ');
+}
+
+function summarizeFlow(flow) {
+  if (!flow.length) {
+    return [];
+  }
+
+  const orderedKinds = ['state', 'scheduler', 'render', 'memo', 'diff', 'patch', 'effect'];
+
+  return orderedKinds
+    .map((kind) => flow.filter((entry) => entry.kind === kind).at(-1))
+    .filter(Boolean);
 }
 
 function summarizeDeps(deps) {
   if (!Array.isArray(deps)) {
-    return '없음';
+    return 'none';
   }
 
   return deps.map((value) => summarizeValue(value)).join(', ');
@@ -531,6 +532,70 @@ function summarizeValue(value) {
   }
 
   return JSON.stringify(value);
+}
+
+function summarizeMemoValue(value) {
+  if (isGameResult(value)) {
+    if (value.winner) {
+      return `winner ${value.winner} / line ${value.winningLine.join('-')}`;
+    }
+
+    if (value.isDraw) {
+      return 'draw';
+    }
+
+    return 'winner none / draw no';
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length <= 9 && value.every((entry) => typeof entry === 'string')) {
+      return value.map((entry) => entry || '-').join(' ');
+    }
+
+    return `array(${value.length})`;
+  }
+
+  return summarizeValue(value);
+}
+
+function summarizeEffectDeps(deps) {
+  if (!Array.isArray(deps) || !deps.length) {
+    return 'effect idle';
+  }
+
+  return deps.map((value) => summarizeMemoValue(value)).join(' / ');
+}
+
+function summarizeStateValue(value) {
+  if (isGameState(value)) {
+    return `step ${value.stepIndex} / next ${value.xIsNext ? 'X' : 'O'} / X:${value.score.x} O:${value.score.o} D:${value.score.draws}`;
+  }
+
+  return summarizeValue(value);
+}
+
+function isGameState(value) {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && Array.isArray(value.history)
+    && typeof value.stepIndex === 'number'
+    && typeof value.xIsNext === 'boolean'
+    && value.score
+    && typeof value.score.x === 'number'
+    && typeof value.score.o === 'number'
+    && typeof value.score.draws === 'number',
+  );
+}
+
+function isGameResult(value) {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && 'winner' in value
+    && 'winningLine' in value
+    && 'isDraw' in value,
+  );
 }
 
 function scheduleMicrotask(callback) {

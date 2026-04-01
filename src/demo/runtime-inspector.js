@@ -24,83 +24,92 @@ export function createRuntimeInspectorStore() {
   };
 }
 
-export function mountRuntimeInspector(container, store, title, description) {
+export function mountRuntimeInspector(container, store) {
   function InspectorApp() {
-    const [snapshot, setSnapshot] = useState(() => store.getSnapshot());
+    const [viewState, setViewState] = useState(() => ({
+      current: store.getSnapshot(),
+      previousHooks: [],
+    }));
 
     useEffect(() => {
-      return store.subscribe((nextSnapshot) => setSnapshot(nextSnapshot));
+      return store.subscribe((nextSnapshot) => {
+        setViewState((currentViewState) => ({
+          current: nextSnapshot,
+          previousHooks: currentViewState.current.hooks || [],
+        }));
+      });
     }, []);
 
     return h(
       'section',
       { class: 'inspector-shell' },
-      h(
-        'div',
-        { class: 'info-card inspector-hero' },
-        h('p', { class: 'panel-kicker' }, '런타임 인스펙터'),
-        h('h2', { class: 'history-title' }, title),
-        h('p', { class: 'timeline-detail inspector-description' }, description),
-        h('p', { class: 'inspector-render-count' }, `루트 App 렌더 횟수: ${snapshot.renderCount}`),
-      ),
-      h(HookSlotsCard, { hooks: snapshot.hooks }),
-      h(RenderFlowCard, { flow: snapshot.flow, patchSummary: snapshot.patchSummary }),
+      h(HookSlotsCard, {
+        hooks: viewState.current.hooks,
+        previousHooks: viewState.previousHooks,
+        renderCount: viewState.current.renderCount,
+      }),
     );
   }
 
   return new FunctionComponent(InspectorApp).mount(container);
 }
 
-function HookSlotsCard({ hooks }) {
+function HookSlotsCard({ hooks, previousHooks, renderCount }) {
+  const visibleSlots = hooks.filter((hook) => ![1, 2].includes(hook.slot));
+
+  const comparedHooks = visibleSlots.map((hook, index) => {
+    const previousHook = previousHooks.find((entry) => entry.slot === hook.slot);
+    const changed = !previousHook
+      || previousHook.summary !== hook.summary
+      || previousHook.detail !== hook.detail;
+
+    return {
+      ...hook,
+      displaySlot: index + 1,
+      previousSummary: previousHook?.summary || '이전 값 없음',
+      statusClassName: changed ? 'is-changed' : 'is-stable',
+      changed,
+    };
+  });
+
   return h(
     'section',
-    { class: 'info-card history-card' },
-    h('p', { class: 'panel-kicker' }, 'Hooks 동작 시각화'),
-    h('h3', { class: 'history-title' }, '루트 hooks[] 슬롯'),
-    hooks.length
+    { class: 'info-card history-card inspector-panel' },
+    h('p', { class: 'panel-kicker' }, '동작 시각화'),
+    h('h3', { class: 'history-title' }, '루트 hooks'),
+    h(
+      'div',
+      { class: 'hook-summary-card' },
+      h(
+        'p',
+        { class: 'timeline-detail inspector-meta' },
+        `루트 App 렌더 ${renderCount}회`,
+      ),
+    ),
+    comparedHooks.length
       ? h(
           'div',
-          { class: 'timeline-list' },
-          ...hooks.map((hook) =>
+          { class: 'hook-slot-grid' },
+          ...comparedHooks.map((hook) =>
             h(
               'article',
               {
-                class: 'hook-slot-card',
+                class: `hook-slot-card ${hook.statusClassName}`,
                 'data-key': `hook-slot-${hook.slot}`,
               },
-              h('strong', { class: 'timeline-title' }, `슬롯 ${hook.slot} · ${hook.hook}`),
-              h('p', { class: 'timeline-detail' }, `현재 값: ${hook.summary}`),
-              h('p', { class: 'timeline-detail' }, hook.detail),
+              h(
+                'div',
+                { class: 'hook-slot-header' },
+                h('strong', { class: 'timeline-title' }, `슬롯 ${hook.displaySlot}`),
+              ),
+              h('p', { class: 'timeline-detail hook-kind' }, hook.hook),
+              h('p', { class: 'hook-label' }, '이전 값'),
+              h('p', { class: 'timeline-detail hook-before' }, hook.previousSummary),
+              h('p', { class: 'hook-label' }, '현재 값'),
+              h('p', { class: 'timeline-detail hook-after' }, hook.summary),
             ),
           ),
         )
       : h('p', { class: 'timeline-detail' }, '아직 기록된 hook 슬롯이 없습니다.'),
-  );
-}
-
-function RenderFlowCard({ flow, patchSummary }) {
-  return h(
-    'section',
-    { class: 'info-card history-card' },
-    h('p', { class: 'panel-kicker' }, '렌더링 흐름 추적'),
-    h('h3', { class: 'history-title' }, 'setState -> patch -> effect'),
-    h('p', { class: 'timeline-detail inspector-description' }, `최근 patch 요약: ${patchSummary}`),
-    flow.length
-      ? h(
-          'div',
-          { class: 'timeline-list' },
-          ...flow.map((entry, index) =>
-            h(
-              'article',
-              {
-                class: `timeline-entry is-${entry.kind}`,
-                'data-key': entry.id,
-              },
-              h('strong', { class: 'timeline-title' }, `${index + 1}. ${entry.title}`),
-              h('p', { class: 'timeline-detail' }, entry.detail),
-            ),
-          ),
-        )
-      : h('p', { class: 'timeline-detail' }, '아직 기록된 렌더링 흐름이 없습니다.'),
   );
 }

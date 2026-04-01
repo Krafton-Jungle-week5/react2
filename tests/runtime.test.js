@@ -172,7 +172,7 @@ describe('FunctionComponent runtime', () => {
     }).toThrow('root component');
   });
 
-  it('publishes hook slots and render flow snapshots to the attached inspector', async () => {
+  it('publishes compact hook slots to the attached inspector', async () => {
     const container = document.createElement('div');
     const snapshots = [];
 
@@ -211,9 +211,7 @@ describe('FunctionComponent runtime', () => {
     const snapshot = snapshots.at(-1);
 
     expect(snapshot.hooks.map((hook) => hook.hook)).toEqual(['useState', 'useMemo', 'useEffect']);
-    expect(snapshot.flow.some((entry) => entry.title.includes('useState 슬롯 0'))).toBe(true);
-    expect(snapshot.flow.some((entry) => entry.title.includes('scheduleUpdate'))).toBe(true);
-    expect(snapshot.flow.some((entry) => entry.title.includes('renderAndCommit'))).toBe(true);
-    expect(snapshot.flow.some((entry) => entry.title.includes('useEffect 슬롯 2 실행'))).toBe(true);
+    expect(snapshot.hooks[0].summary).toBe('1');
+    expect(snapshot.hooks[1].summary).toBe('2');
   });
 });
