@@ -1,93 +1,99 @@
 import { FunctionComponent, h, useEffect, useMemo, useState } from '../index.js';
 import './styles.css';
 
-let nextConceptId = 4;
-
-const INITIAL_CONCEPTS = [
-  { id: 'concept-1', label: 'useState로 루트 상태 저장하기', done: true },
-  { id: 'concept-2', label: 'useMemo로 완료율 계산하기', done: false },
-  { id: 'concept-3', label: 'useEffect로 동기화 메시지 남기기', done: false },
+const WINNING_LINES = [
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 3, 6],
+  [1, 4, 7],
+  [2, 5, 8],
+  [0, 4, 8],
+  [2, 4, 6],
 ];
 
 function App() {
-  const [title, setTitle] = useState('React 핵심 개념 실험실');
-  const [draft, setDraft] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [concepts, setConcepts] = useState(INITIAL_CONCEPTS);
-  const [syncMessage, setSyncMessage] = useState('아직 동기화 전입니다.');
-  const [batchScore, setBatchScore] = useState(0);
+  const [history, setHistory] = useState([createEmptyBoard()]);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [xIsNext, setXIsNext] = useState(true);
+  const [score, setScore] = useState({ x: 0, o: 0, draws: 0 });
 
-  const summary = useMemo(() => {
-    const completed = concepts.filter((item) => item.done).length;
-    const total = concepts.length;
-    const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const board = history[stepIndex];
 
-    return {
-      completed,
-      percent,
-      remaining: total - completed,
-      total,
-    };
-  }, [concepts]);
+  const result = useMemo(() => {
+    return calculateResult(board);
+  }, [board]);
 
-  const visibleConcepts = useMemo(() => {
-    if (filter === 'done') {
-      return concepts.filter((item) => item.done);
+  const moveCount = useMemo(() => {
+    return board.filter(Boolean).length;
+  }, [board]);
+
+  const statusText = useMemo(() => {
+    if (result.winner) {
+      return `${result.winner} wins the round.`;
     }
 
-    if (filter === 'todo') {
-      return concepts.filter((item) => !item.done);
+    if (result.isDraw) {
+      return 'Draw game. Reset the board or jump to an earlier move.';
     }
 
-    return concepts;
-  }, [concepts, filter]);
+    return `${xIsNext ? 'X' : 'O'} turn. Choose a square.`;
+  }, [result.isDraw, result.winner, xIsNext]);
 
   useEffect(() => {
-    const nextMessage = `${summary.completed}/${summary.total}개 항목이 화면과 동기화되었습니다.`;
-    document.title = `${title} · ${summary.percent}%`;
-    setSyncMessage(`${nextMessage} (${timestamp()})`);
-  }, [title, summary.completed, summary.percent, summary.total]);
+    document.title = result.winner
+      ? `Tic-Tac-Toe - ${result.winner} won`
+      : result.isDraw
+        ? 'Tic-Tac-Toe - Draw'
+        : `Tic-Tac-Toe - ${xIsNext ? 'X' : 'O'} turn`;
+  }, [result.isDraw, result.winner, xIsNext]);
 
-  const handleAddConcept = () => {
-    const label = draft.trim();
-
-    if (!label) {
+  const handleSquareClick = (index) => {
+    if (board[index] || result.winner || result.isDraw) {
       return;
     }
 
-    setConcepts((current) => [
-      ...current,
-      {
-        id: `concept-${nextConceptId++}`,
-        label,
-        done: false,
-      },
-    ]);
-    setDraft('');
+    const nextBoard = [...board];
+    const nextToken = xIsNext ? 'X' : 'O';
+    nextBoard[index] = nextToken;
+
+    const nextHistory = history.slice(0, stepIndex + 1).concat([nextBoard]);
+    const nextResult = calculateResult(nextBoard);
+
+    setHistory(nextHistory);
+    setStepIndex(nextHistory.length - 1);
+    setXIsNext(!xIsNext);
+
+    if (nextResult.winner) {
+      setScore((current) => ({
+        ...current,
+        [nextResult.winner.toLowerCase()]: current[nextResult.winner.toLowerCase()] + 1,
+      }));
+      return;
+    }
+
+    if (nextResult.isDraw) {
+      setScore((current) => ({
+        ...current,
+        draws: current.draws + 1,
+      }));
+    }
   };
 
-  const handleToggleConcept = (targetId) => {
-    setConcepts((current) => {
-      return current.map((item) => {
-        if (item.id !== targetId) {
-          return item;
-        }
-
-        return {
-          ...item,
-          done: !item.done,
-        };
-      });
-    });
+  const jumpToStep = (nextStepIndex) => {
+    setStepIndex(nextStepIndex);
+    setXIsNext(nextStepIndex % 2 === 0);
   };
 
-  const handleRemoveConcept = (targetId) => {
-    setConcepts((current) => current.filter((item) => item.id !== targetId));
+  const resetBoard = () => {
+    setHistory([createEmptyBoard()]);
+    setStepIndex(0);
+    setXIsNext(true);
   };
 
-  const handleBatchDemo = () => {
-    setBatchScore((value) => value + 1);
-    setBatchScore((value) => value + 1);
+  const resetEverything = () => {
+    resetBoard();
+    setScore({ x: 0, o: 0, draws: 0 });
   };
 
   return h(
@@ -99,233 +105,240 @@ function App() {
       h(
         'div',
         { class: 'hero-copy' },
-        h('p', { class: 'eyebrow' }, 'Week 5 Assignment'),
-        h('h1', { class: 'hero-title' }, title),
+        h('p', { class: 'eyebrow' }, 'React2 Demo'),
+        h('h1', { class: 'hero-title' }, 'Tic-Tac-Toe Playground'),
         h(
           'p',
           { class: 'hero-description' },
-          '루트 컴포넌트가 상태를 들고, 자식 컴포넌트는 props만 받아 화면을 그리는 최소 학습용 데모입니다.',
+          'The old experiment screen has been replaced with a simple game that proves state updates, memoized winner checks, effects, and rerendering on top of the custom React2 runtime.',
         ),
       ),
-      h(EditorPanel, {
-        batchScore,
-        draft,
-        onAddConcept: handleAddConcept,
-        onBatchDemo: handleBatchDemo,
-        onDraftInput: (event) => setDraft(event.target.value),
-        onTitleInput: (event) => setTitle(event.target.value),
-        title,
+      h(StatusPanel, {
+        moveCount,
+        statusText,
+        winner: result.winner,
+        xIsNext,
       }),
     ),
     h(
       'section',
-      { class: 'dashboard-grid' },
-      h(SummaryCard, {
-        label: '완료율',
-        value: `${summary.percent}%`,
-        caption: `${summary.completed}개 완료 / ${summary.remaining}개 남음`,
-      }),
-      h(SummaryCard, {
-        label: '배칭 점수',
-        value: `+${batchScore}`,
-        caption: '한 번의 클릭에서 setState 두 번 호출',
-      }),
-      h(SummaryCard, {
-        label: 'useEffect',
-        value: '동기화 중',
-        caption: syncMessage,
-      }),
-    ),
-    h(FilterTabs, {
-      currentFilter: filter,
-      onChange: setFilter,
-    }),
-    h(ConceptList, {
-      items: visibleConcepts,
-      onRemove: handleRemoveConcept,
-      onToggle: handleToggleConcept,
-    }),
-    h(
-      'section',
-      { class: 'note-panel' },
-      h('h2', { class: 'section-title' }, '구현 포인트'),
+      { class: 'game-layout' },
       h(
-        'ul',
-        { class: 'note-list' },
-        h('li', {}, '상태는 App 하나에만 있고, 나머지 컴포넌트는 전부 props만 사용합니다.'),
-        h('li', {}, 'useMemo가 완료율과 필터링된 목록을 계산합니다.'),
-        h('li', {}, 'useEffect가 브라우저 제목과 동기화 메시지를 갱신합니다.'),
-        h('li', {}, '기존 Virtual DOM diff/patch가 필요한 부분만 DOM에 반영합니다.'),
+        'section',
+        { class: 'board-panel' },
+        h(
+          'div',
+          { class: 'section-heading' },
+          h(
+            'div',
+            {},
+            h('p', { class: 'panel-kicker' }, 'Board'),
+            h('h2', { class: 'section-title' }, statusText),
+          ),
+          h(
+            'div',
+            { class: 'move-pill' },
+            'Moves',
+            h('strong', {}, `${moveCount}/9`),
+          ),
+        ),
+        h(Board, {
+          board,
+          onSquareClick: handleSquareClick,
+          winningLine: result.winningLine,
+        }),
+        h(
+          'div',
+          { class: 'button-row' },
+          h(
+            'button',
+            {
+              class: 'primary-button',
+              onClick: resetBoard,
+              type: 'button',
+            },
+            'Reset Board',
+          ),
+          h(
+            'button',
+            {
+              class: 'ghost-button',
+              onClick: resetEverything,
+              type: 'button',
+            },
+            'Reset Score',
+          ),
+        ),
+      ),
+      h(
+        'aside',
+        { class: 'side-panel' },
+        h(ScoreCard, { score }),
+        h(GuideCard, { renderCount: history.length - 1 }),
+        h(HistoryCard, {
+          history,
+          stepIndex,
+          onJump: jumpToStep,
+        }),
       ),
     ),
   );
 }
 
-function EditorPanel({
-  batchScore,
-  draft,
-  onAddConcept,
-  onBatchDemo,
-  onDraftInput,
-  onTitleInput,
-  title,
-}) {
+function StatusPanel({ moveCount, statusText, winner, xIsNext }) {
+  const badgeClass = winner
+    ? 'status-badge is-win'
+    : xIsNext
+      ? 'status-badge is-x'
+      : 'status-badge is-o';
+  const badgeText = winner || (xIsNext ? 'X TURN' : 'O TURN');
+
   return h(
     'div',
-    { class: 'editor-panel' },
-    h('label', { class: 'field-label' }, '데모 제목'),
-    h('input', {
-      class: 'text-field',
-      onInput: onTitleInput,
-      placeholder: '데모 제목을 입력하세요',
-      type: 'text',
-      value: title,
-    }),
-    h('label', { class: 'field-label' }, '추가할 학습 항목'),
-    h(
-      'div',
-      { class: 'inline-controls' },
-      h('input', {
-        class: 'text-field',
-        onInput: onDraftInput,
-        placeholder: '예: diff 후 patch 적용 흐름',
-        type: 'text',
-        value: draft,
-      }),
-      h(
-        'button',
-        {
-          class: 'primary-button',
-          disabled: !draft.trim(),
-          onClick: onAddConcept,
-          type: 'button',
-        },
-        '항목 추가',
-      ),
-    ),
-    h(
-      'button',
-      {
-        class: 'secondary-button',
-        onClick: onBatchDemo,
-        type: 'button',
-      },
-      `배칭 데모 실행 (+2, 현재 ${batchScore})`,
-    ),
+    { class: 'status-card' },
+    h('span', { class: badgeClass }, badgeText),
+    h('strong', { class: 'status-title' }, statusText),
+    h('p', { class: 'status-caption' }, `${moveCount} squares are filled in the current round.`),
   );
 }
 
-function SummaryCard({ caption, label, value }) {
-  return h(
-    'article',
-    { class: 'summary-card' },
-    h('p', { class: 'summary-label' }, label),
-    h('strong', { class: 'summary-value' }, value),
-    h('p', { class: 'summary-caption' }, caption),
-  );
-}
-
-function FilterTabs({ currentFilter, onChange }) {
-  const filters = [
-    { key: 'all', label: '전체' },
-    { key: 'todo', label: '진행 중' },
-    { key: 'done', label: '완료' },
-  ];
-
+function Board({ board, onSquareClick, winningLine }) {
   return h(
     'section',
-    { class: 'filter-row' },
-    ...filters.map((filter) => {
-      const isActive = currentFilter === filter.key;
-
-      return h(
-        'button',
-        {
-          class: isActive ? 'filter-chip is-active' : 'filter-chip',
-          'data-key': filter.key,
-          onClick: () => onChange(filter.key),
-          type: 'button',
-        },
-        filter.label,
-      );
-    }),
+    { class: 'board-grid' },
+    ...board.map((value, index) =>
+      h(Square, {
+        index,
+        isWinning: winningLine.includes(index),
+        onClick: () => onSquareClick(index),
+        value,
+      }),
+    ),
   );
 }
 
-function ConceptList({ items, onRemove, onToggle }) {
-  if (!items.length) {
-    return h(
-      'section',
-      { class: 'empty-state' },
-      h('p', { class: 'empty-title' }, '현재 필터에 맞는 항목이 없습니다.'),
-      h('p', { class: 'empty-description' }, '새 항목을 추가하거나 필터를 바꿔보세요.'),
-    );
+function Square({ index, isWinning, onClick, value }) {
+  const className = [
+    'square-button',
+    value ? `is-${value.toLowerCase()}` : '',
+    isWinning ? 'is-winning' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return h(
+    'button',
+    {
+      'aria-label': `square-${index + 1}`,
+      class: className,
+      onClick,
+      type: 'button',
+    },
+    value || '',
+  );
+}
+
+function ScoreCard({ score }) {
+  return h(
+    'section',
+    { class: 'info-card' },
+    h('p', { class: 'panel-kicker' }, 'Score'),
+    h(
+      'div',
+      { class: 'score-grid' },
+      h(ScoreItem, { label: 'X Wins', value: score.x }),
+      h(ScoreItem, { label: 'O Wins', value: score.o }),
+      h(ScoreItem, { label: 'Draws', value: score.draws }),
+    ),
+  );
+}
+
+function ScoreItem({ label, value }) {
+  return h(
+    'article',
+    { class: 'score-item' },
+    h('span', { class: 'score-label' }, label),
+    h('strong', { class: 'score-value' }, String(value)),
+  );
+}
+
+function GuideCard({ renderCount }) {
+  return h(
+    'section',
+    { class: 'info-card' },
+    h('p', { class: 'panel-kicker' }, 'Runtime Notes'),
+    h(
+      'ul',
+      { class: 'guide-list' },
+      h('li', {}, 'All hooks live in the root App component because this runtime only supports root-level hooks.'),
+      h('li', {}, 'Winner detection and move count are memoized with useMemo.'),
+      h('li', {}, `The board has rerendered through ${renderCount} committed move${renderCount === 1 ? '' : 's'}.`),
+    ),
+  );
+}
+
+function HistoryCard({ history, onJump, stepIndex }) {
+  return h(
+    'section',
+    { class: 'info-card history-card' },
+    h('p', { class: 'panel-kicker' }, 'Time Travel'),
+    h('h3', { class: 'history-title' }, 'Move History'),
+    h(
+      'div',
+      { class: 'history-list' },
+      ...history.map((board, index) =>
+        h(
+          'button',
+          {
+            class: index === stepIndex ? 'history-button is-active' : 'history-button',
+            onClick: () => onJump(index),
+            type: 'button',
+          },
+          buildHistoryLabel(history, index),
+        ),
+      ),
+    ),
+  );
+}
+
+function buildHistoryLabel(history, index) {
+  if (index === 0) {
+    return 'Go to game start';
   }
 
-  return h(
-    'section',
-    { class: 'concept-list' },
-    ...items.map((item) => {
-      return h(ConceptCard, {
-        item,
-        onRemove,
-        onToggle,
-      });
-    }),
-  );
+  const currentBoard = history[index];
+  const previousBoard = history[index - 1];
+  const changedIndex = currentBoard.findIndex((cell, cellIndex) => cell !== previousBoard[cellIndex]);
+  const token = changedIndex >= 0 ? currentBoard[changedIndex] : '';
+
+  if (!token) {
+    return `Go to move ${index}`;
+  }
+
+  return `Go to move ${index} (${token} on ${changedIndex + 1})`;
 }
 
-function ConceptCard({ item, onRemove, onToggle }) {
-  return h(
-    'article',
-    {
-      class: item.done ? 'concept-card is-done' : 'concept-card',
-      'data-key': item.id,
-    },
-    h(
-      'div',
-      { class: 'concept-copy' },
-      h('p', { class: 'concept-badge' }, item.done ? 'Done' : 'Todo'),
-      h('h3', { class: 'concept-title' }, item.label),
-      h(
-        'p',
-        { class: 'concept-meta' },
-        item.done
-          ? '완료된 항목은 다른 필터에서도 그대로 재사용됩니다.'
-          : '클릭하면 props 기반 자식 컴포넌트가 다시 렌더링됩니다.',
-      ),
-    ),
-    h(
-      'div',
-      { class: 'concept-actions' },
-      h(
-        'button',
-        {
-          class: 'ghost-button',
-          onClick: () => onToggle(item.id),
-          type: 'button',
-        },
-        item.done ? '다시 열기' : '완료 처리',
-      ),
-      h(
-        'button',
-        {
-          class: 'danger-button',
-          onClick: () => onRemove(item.id),
-          type: 'button',
-        },
-        '삭제',
-      ),
-    ),
-  );
+function calculateResult(board) {
+  for (const line of WINNING_LINES) {
+    const [first, second, third] = line;
+    if (board[first] && board[first] === board[second] && board[first] === board[third]) {
+      return {
+        winner: board[first],
+        winningLine: line,
+        isDraw: false,
+      };
+    }
+  }
+
+  return {
+    winner: null,
+    winningLine: [],
+    isDraw: board.every(Boolean),
+  };
 }
 
-function timestamp() {
-  return new Date().toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+function createEmptyBoard() {
+  return Array(9).fill('');
 }
 
 const container = document.querySelector('#app');
