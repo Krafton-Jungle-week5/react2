@@ -225,12 +225,26 @@ export function mountVNode(container, node) {
   container.replaceChildren(rendered);
 }
 
+export function diffTrees(previousTree, nextTree) {
+  const operations = [];
+
+  diffNode(previousTree, nextTree, [], operations);
+
+  return operations;
+}
+
 export function patchDom(container, previousTree, nextTree) {
-  patchChildren(
-    container,
-    previousTree?.children || [],
-    nextTree?.children || [],
-  );
+  const operations = sortPatchOperations(diffTrees(previousTree, nextTree));
+
+  applyPatchOperations(container, operations);
+
+  return operations;
+}
+
+export function applyPatchOperations(container, operations) {
+  for (const operation of operations) {
+    applyPatchOperation(container, operation);
+  }
 }
 
 export function setDomAttribute(element, name, value) {
@@ -292,90 +306,358 @@ export function removeDomAttribute(element, name) {
   element.removeAttribute(name);
 }
 
-function patchChildren(parentNode, previousChildren, nextChildren) {
-  const sharedLength = Math.min(previousChildren.length, nextChildren.length);
-
-  for (let index = 0; index < sharedLength; index += 1) {
-    patchExistingChild(
-      parentNode,
-      index,
-      previousChildren[index],
-      nextChildren[index],
-    );
-  }
-
-  for (let index = sharedLength; index < nextChildren.length; index += 1) {
-    const referenceNode = parentNode.childNodes[index] || null;
-    const childNode = renderVNode(nextChildren[index], parentNode.ownerDocument || document);
-
-    parentNode.insertBefore(childNode, referenceNode);
-  }
-
-  for (let index = previousChildren.length - 1; index >= nextChildren.length; index -= 1) {
-    const childNode = parentNode.childNodes[index];
-
-    if (childNode) {
-      parentNode.removeChild(childNode);
-    }
-  }
-}
-
-function patchExistingChild(parentNode, index, previousNode, nextNode) {
-  const currentDomNode = parentNode.childNodes[index];
-
-  if (!currentDomNode) {
-    parentNode.append(renderVNode(nextNode, parentNode.ownerDocument || document));
+function diffNode(previousNode, nextNode, path, operations) {
+  if (!nextNode) {
     return;
   }
 
-  if (!canReuseVNode(previousNode, nextNode)) {
-    parentNode.replaceChild(
-      renderVNode(nextNode, parentNode.ownerDocument || document),
-      currentDomNode,
-    );
+  if (nextNode.type === 'root') {
+    diffChildren(path, previousNode?.children || [], nextNode.children || [], operations);
     return;
   }
 
   if (nextNode.type === 'text') {
-    if (previousNode.value !== nextNode.value) {
-      currentDomNode.textContent = nextNode.value;
+    if (previousNode?.value !== nextNode.value) {
+      operations.push({
+        type: 'UPDATE_TEXT',
+        path,
+        value: nextNode.value,
+      });
     }
     return;
   }
 
-  patchAttributes(currentDomNode, previousNode.attrs || {}, nextNode.attrs || {});
+  const payload = diffProps(previousNode?.attrs || {}, nextNode.attrs || {});
 
-  if (nextNode.tag === 'textarea' || VOID_TAGS.has(nextNode.tag)) {
+  if (payload.set || payload.remove.length) {
+    operations.push({
+      type: 'UPDATE_PROPS',
+      path,
+      payload,
+    });
+  }
+
+  diffChildren(path, previousNode?.children || [], nextNode.children || [], operations);
+}
+
+function diffChildren(parentPath, previousChildren, nextChildren, operations) {
+  if (canUseKeyedDiff(previousChildren, nextChildren)) {
+    diffKeyedChildren(parentPath, previousChildren, nextChildren, operations);
     return;
   }
 
-  patchChildren(
-    currentDomNode,
-    previousNode.children || [],
-    nextNode.children || [],
+  diffIndexedChildren(parentPath, previousChildren, nextChildren, operations);
+}
+
+function diffIndexedChildren(parentPath, previousChildren, nextChildren, operations) {
+  const sharedLength = Math.min(previousChildren.length, nextChildren.length);
+
+  for (let index = 0; index < sharedLength; index += 1) {
+    const previousChild = previousChildren[index];
+    const nextChild = nextChildren[index];
+    const path = parentPath.concat(index);
+
+    if (canReuseVNode(previousChild, nextChild)) {
+      diffNode(previousChild, nextChild, path, operations);
+      continue;
+    }
+
+    operations.push(createRemovalOperation(parentPath, previousChild, index));
+    operations.push(createInsertionOperation(parentPath, nextChild, index));
+  }
+
+  for (let index = sharedLength; index < nextChildren.length; index += 1) {
+    operations.push(createInsertionOperation(parentPath, nextChildren[index], index));
+  }
+
+  for (let index = previousChildren.length - 1; index >= nextChildren.length; index -= 1) {
+    operations.push(createRemovalOperation(parentPath, previousChildren[index], index));
+  }
+}
+
+function diffKeyedChildren(parentPath, previousChildren, nextChildren, operations) {
+  const previousByKey = new Map(
+    previousChildren.map((child, index) => [getVNodeKey(child), { child, index }]),
+  );
+  const usedKeys = new Set();
+
+  for (let nextIndex = 0; nextIndex < nextChildren.length; nextIndex += 1) {
+    const nextChild = nextChildren[nextIndex];
+    const key = getVNodeKey(nextChild);
+    const match = previousByKey.get(key);
+    const path = parentPath.concat(nextIndex);
+
+    if (!match) {
+      operations.push(createInsertionOperation(parentPath, nextChild, nextIndex, key));
+      continue;
+    }
+
+    usedKeys.add(key);
+
+    if (!canReuseVNode(match.child, nextChild)) {
+      operations.push(createRemovalOperation(parentPath, match.child, match.index, key));
+      operations.push(createInsertionOperation(parentPath, nextChild, nextIndex, key));
+      continue;
+    }
+
+    if (match.index !== nextIndex) {
+      operations.push({
+        type: 'MOVE_CHILD',
+        path,
+        parentPath,
+        fromIndex: match.index,
+        toIndex: nextIndex,
+        key,
+      });
+    }
+
+    diffNode(match.child, nextChild, path, operations);
+  }
+
+  for (let index = previousChildren.length - 1; index >= 0; index -= 1) {
+    const previousChild = previousChildren[index];
+    const key = getVNodeKey(previousChild);
+
+    if (!usedKeys.has(key)) {
+      operations.push(createRemovalOperation(parentPath, previousChild, index, key));
+    }
+  }
+}
+
+function createInsertionOperation(parentPath, node, index, key = getVNodeKey(node)) {
+  return {
+    type: 'INSERT_CHILD',
+    path: parentPath.concat(index),
+    parentPath,
+    index,
+    key,
+    node: cloneVNode(node),
+  };
+}
+
+function createRemovalOperation(parentPath, node, index, key = getVNodeKey(node)) {
+  return {
+    type: 'REMOVE_CHILD',
+    path: parentPath.concat(index),
+    parentPath,
+    index,
+    key,
+    node: cloneVNode(node),
+  };
+}
+
+function sortPatchOperations(operations) {
+  const priority = {
+    REMOVE_CHILD: 0,
+    INSERT_CHILD: 1,
+    MOVE_CHILD: 2,
+    UPDATE_PROPS: 3,
+    UPDATE_TEXT: 4,
+  };
+
+  return operations
+    .map((operation, order) => ({ ...operation, order }))
+    .sort((left, right) => {
+      const typeDiff = priority[left.type] - priority[right.type];
+
+      if (typeDiff !== 0) {
+        return typeDiff;
+      }
+
+      if (left.type === 'REMOVE_CHILD' && right.type === 'REMOVE_CHILD') {
+        const depthDiff = right.parentPath.length - left.parentPath.length;
+
+        if (depthDiff !== 0) {
+          return depthDiff;
+        }
+
+        return right.index - left.index;
+      }
+
+      if (left.type === 'MOVE_CHILD' && right.type === 'MOVE_CHILD') {
+        const parentDiff = comparePath(left.parentPath, right.parentPath);
+
+        if (parentDiff !== 0) {
+          return parentDiff;
+        }
+
+        return left.toIndex - right.toIndex;
+      }
+
+      if (left.type === 'INSERT_CHILD' && right.type === 'INSERT_CHILD') {
+        const parentDiff = comparePath(left.parentPath, right.parentPath);
+
+        if (parentDiff !== 0) {
+          return parentDiff;
+        }
+
+        return left.index - right.index;
+      }
+
+      return comparePath(left.path, right.path) || left.order - right.order;
+    });
+}
+
+function applyPatchOperation(container, operation) {
+  switch (operation.type) {
+    case 'REMOVE_CHILD':
+      applyRemoval(container, operation);
+      return;
+    case 'MOVE_CHILD':
+      applyMove(container, operation);
+      return;
+    case 'INSERT_CHILD':
+      applyInsertion(container, operation);
+      return;
+    case 'UPDATE_PROPS':
+      applyPropsUpdate(container, operation);
+      return;
+    case 'UPDATE_TEXT':
+      applyTextUpdate(container, operation);
+  }
+}
+
+function applyRemoval(container, operation) {
+  const parentNode = getTargetContainerNode(container, operation.parentPath);
+
+  if (!parentNode) {
+    return;
+  }
+
+  const targetNode = operation.key
+    ? findChildNodeByKey(parentNode, operation.key) || parentNode.childNodes[operation.index]
+    : parentNode.childNodes[operation.index];
+
+  if (targetNode) {
+    parentNode.removeChild(targetNode);
+  }
+}
+
+function applyMove(container, operation) {
+  const parentNode = getTargetContainerNode(container, operation.parentPath);
+
+  if (!parentNode) {
+    return;
+  }
+
+  const movingNode = operation.key
+    ? findChildNodeByKey(parentNode, operation.key)
+    : parentNode.childNodes[operation.fromIndex];
+
+  if (!movingNode) {
+    return;
+  }
+
+  const snapshot = Array.from(parentNode.childNodes);
+  const anchorNode = snapshot[operation.toIndex] || null;
+
+  if (!anchorNode) {
+    parentNode.appendChild(movingNode);
+    return;
+  }
+
+  if (snapshot.indexOf(movingNode) < operation.toIndex) {
+    parentNode.insertBefore(movingNode, anchorNode.nextSibling);
+  } else {
+    parentNode.insertBefore(movingNode, anchorNode);
+  }
+}
+
+function applyInsertion(container, operation) {
+  const parentNode = getTargetContainerNode(container, operation.parentPath);
+
+  if (!parentNode) {
+    return;
+  }
+
+  const referenceNode = parentNode.childNodes[operation.index] || null;
+
+  parentNode.insertBefore(
+    renderVNode(operation.node, parentNode.ownerDocument || document),
+    referenceNode,
   );
 }
 
-function patchAttributes(element, previousAttrs, nextAttrs) {
-  if (element?.nodeType !== ELEMENT_NODE) {
+function applyPropsUpdate(container, operation) {
+  const node = getDomNodeAtPath(container, operation.path);
+
+  if (!(node instanceof Element)) {
     return;
   }
 
-  const attrNames = new Set([
-    ...Object.keys(previousAttrs),
-    ...Object.keys(nextAttrs),
-  ]);
+  for (const name of operation.payload.remove) {
+    removeDomAttribute(node, name);
+  }
 
-  for (const name of attrNames) {
+  for (const [name, value] of Object.entries(operation.payload.set || {})) {
+    setDomAttribute(node, name, value);
+  }
+}
+
+function applyTextUpdate(container, operation) {
+  const node = getDomNodeAtPath(container, operation.path);
+
+  if (node) {
+    node.textContent = operation.value;
+  }
+}
+
+function getTargetContainerNode(container, path) {
+  if (!path.length) {
+    return container;
+  }
+
+  return getDomNodeAtPath(container, path);
+}
+
+function getDomNodeAtPath(container, path) {
+  let currentNode = container;
+
+  for (const index of path) {
+    currentNode = currentNode?.childNodes?.[index] || null;
+  }
+
+  return currentNode;
+}
+
+function findChildNodeByKey(parentNode, key) {
+  return Array.from(parentNode.children).find((child) => {
+    return child.getAttribute('data-key') === key || child.id === key;
+  }) || null;
+}
+
+function comparePath(leftPath, rightPath) {
+  const length = Math.min(leftPath.length, rightPath.length);
+
+  for (let index = 0; index < length; index += 1) {
+    if (leftPath[index] !== rightPath[index]) {
+      return leftPath[index] - rightPath[index];
+    }
+  }
+
+  return leftPath.length - rightPath.length;
+}
+
+function diffProps(previousAttrs, nextAttrs) {
+  const set = {};
+  const remove = [];
+  const names = new Set([...Object.keys(previousAttrs), ...Object.keys(nextAttrs)]);
+
+  for (const name of names) {
     if (!(name in nextAttrs)) {
-      removeDomAttribute(element, name);
+      remove.push(name);
       continue;
     }
 
     if (previousAttrs[name] !== nextAttrs[name]) {
-      setDomAttribute(element, name, nextAttrs[name]);
+      set[name] = nextAttrs[name];
     }
   }
+
+  return {
+    set: Object.keys(set).length ? set : null,
+    remove,
+  };
 }
 
 export function serializeVNodeToHtml(node) {
@@ -464,6 +746,22 @@ function canReuseVNode(previousNode, nextNode) {
   }
 
   return previousNode.tag === nextNode.tag;
+}
+
+function canUseKeyedDiff(previousChildren, nextChildren) {
+  if (!previousChildren.length || !nextChildren.length) {
+    return false;
+  }
+
+  const previousKeys = previousChildren.map((child) => getVNodeKey(child));
+  const nextKeys = nextChildren.map((child) => getVNodeKey(child));
+
+  if (!previousKeys.every(Boolean) || !nextKeys.every(Boolean)) {
+    return false;
+  }
+
+  return new Set(previousKeys).size === previousKeys.length
+    && new Set(nextKeys).size === nextKeys.length;
 }
 
 export function countVNodeStats(tree) {

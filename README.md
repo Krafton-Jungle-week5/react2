@@ -6,7 +6,7 @@
 
 ## 포함된 모듈
 
-- `vdom`: DOM <-> Virtual DOM 변환, 렌더링, 직렬화
+- `vdom`: DOM <-> Virtual DOM 변환, 렌더링, diff, patch
 - `runtime`: 루트 컴포넌트 실행, hooks 저장, 상태 변경 후 재렌더링
 
 ## 설치
@@ -66,6 +66,7 @@ npm run dev
 
 ```js
 import {
+  diffTrees,
   FunctionComponent,
   h,
   mountVNode,
@@ -89,6 +90,7 @@ const nextTree = parseHtmlToVNode(`
 `);
 
 mountVNode(container, previousTree);
+const operations = diffTrees(previousTree, nextTree);
 patchDom(container, previousTree, nextTree);
 
 function App() {

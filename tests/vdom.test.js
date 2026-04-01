@@ -1,4 +1,5 @@
 import {
+  diffTrees,
   domNodeToVNodeTree,
   mountVNode,
   patchDom,
@@ -26,6 +27,27 @@ describe('Virtual DOM patch engine', () => {
     expect(tree.children[0].children[1].tag).toBe('p');
   });
 
+  it('creates diff operations for changed props, text, and inserted nodes', () => {
+    const previousTree = parseHtmlToVNode(`
+      <div class="before">
+        <p>old text</p>
+      </div>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <div class="after" data-state="ready">
+        <p>new text</p>
+        <span>added</span>
+      </div>
+    `);
+
+    const operations = diffTrees(previousTree, nextTree);
+    const operationTypes = operations.map((operation) => operation.type);
+
+    expect(operationTypes).toContain('UPDATE_PROPS');
+    expect(operationTypes).toContain('UPDATE_TEXT');
+    expect(operationTypes).toContain('INSERT_CHILD');
+  });
+
   it('patches changed props, text, and inserted nodes', () => {
     const container = document.createElement('div');
     const previousTree = parseHtmlToVNode(`
@@ -38,6 +60,52 @@ describe('Virtual DOM patch engine', () => {
         <p>new text</p>
         <span>added</span>
       </div>
+    `);
+
+    mountVNode(container, previousTree);
+    patchDom(container, previousTree, nextTree);
+
+    expect(normalizeHtml(container.innerHTML)).toBe(
+      normalizeHtml(serializeVNodeToHtml(nextTree)),
+    );
+  });
+
+  it('creates move operations for keyed child reordering', () => {
+    const previousTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+        <li data-key="c">C</li>
+      </ul>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="c">C</li>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+      </ul>
+    `);
+
+    const operations = diffTrees(previousTree, nextTree);
+
+    expect(operations.some((operation) => operation.type === 'MOVE_CHILD')).toBe(true);
+  });
+
+  it('patches keyed child moves so actual DOM matches the next tree', () => {
+    const container = document.createElement('div');
+    const previousTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+        <li data-key="c">C</li>
+      </ul>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="c">C</li>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+      </ul>
     `);
 
     mountVNode(container, previousTree);

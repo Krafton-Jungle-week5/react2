@@ -1,5 +1,5 @@
 import { createRootVNode as h, mountVNode as p, patchDom as m } from "./vdom.js";
-import { cloneVNode as b, countVNodeStats as q, domNodeToVNode as z, domNodeToVNodeTree as O, getVNodeKey as D, parseHtmlToVNode as H, removeDomAttribute as I, renderVNode as F, serializeVNodeToHtml as j, setDomAttribute as P } from "./vdom.js";
+import { applyPatchOperations as b, cloneVNode as O, countVNodeStats as q, diffTrees as z, domNodeToVNode as D, domNodeToVNodeTree as H, getVNodeKey as I, parseHtmlToVNode as F, removeDomAttribute as j, renderVNode as P, serializeVNodeToHtml as $, setDomAttribute as K } from "./vdom.js";
 let i = null;
 class M {
   constructor(t, o = {}) {
@@ -100,19 +100,19 @@ function v(e, t) {
     kind: "effect",
     cleanup: null,
     deps: void 0
-  }, o.hooks[n] = r), d(r, "effect", "useEffect"), l(r.deps, t) && (o.pendingEffects.push({
+  }, o.hooks[n] = r), d(r, "effect", "useEffect"), a(r.deps, t) && (o.pendingEffects.push({
     index: n,
     callback: e
-  }), r.deps = a(t));
+  }), r.deps = l(t));
 }
-function S(e, t) {
+function T(e, t) {
   const o = c("useMemo"), n = o.hookIndex++;
   let r = o.hooks[n];
   return r || (r = {
     kind: "memo",
     deps: void 0,
     value: void 0
-  }, o.hooks[n] = r), d(r, "memo", "useMemo"), l(r.deps, t) && (r.value = e(), r.deps = a(t)), r.value;
+  }, o.hooks[n] = r), d(r, "memo", "useMemo"), a(r.deps, t) && (r.value = e(), r.deps = l(t)), r.value;
 }
 function c(e) {
   if (!i || !i.isRendering)
@@ -170,10 +170,10 @@ function f(e) {
 function E(e) {
   return !!e && typeof e == "object" && typeof e.type == "string";
 }
-function l(e, t) {
+function a(e, t) {
   return t === void 0 || e === void 0 || e.length !== t.length ? !0 : t.some((o, n) => !Object.is(o, e[n]));
 }
-function a(e) {
+function l(e) {
   return Array.isArray(e) ? [...e] : void 0;
 }
 function C(e) {
@@ -188,21 +188,23 @@ function N(e) {
 }
 export {
   M as FunctionComponent,
-  b as cloneVNode,
+  b as applyPatchOperations,
+  O as cloneVNode,
   q as countVNodeStats,
   h as createRootVNode,
-  z as domNodeToVNode,
-  O as domNodeToVNodeTree,
-  D as getVNodeKey,
+  z as diffTrees,
+  D as domNodeToVNode,
+  H as domNodeToVNodeTree,
+  I as getVNodeKey,
   R as h,
   p as mountVNode,
-  H as parseHtmlToVNode,
+  F as parseHtmlToVNode,
   m as patchDom,
-  I as removeDomAttribute,
-  F as renderVNode,
-  j as serializeVNodeToHtml,
-  P as setDomAttribute,
+  j as removeDomAttribute,
+  P as renderVNode,
+  $ as serializeVNodeToHtml,
+  K as setDomAttribute,
   v as useEffect,
-  S as useMemo,
+  T as useMemo,
   V as useState
 };
