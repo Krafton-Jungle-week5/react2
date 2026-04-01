@@ -53,6 +53,12 @@ npm run dev
   - 루트 컴포넌트가 생성한 새 Virtual DOM 트리를 기존 트리와 비교합니다.
   - 바뀐 부분만 직접 patch 해서 실제 DOM에 반영합니다.
 
+## 렌더링 시퀀스 다이어그램
+
+아래 이미지는 현재 구현에서 버튼 클릭 이후 `setState`, `scheduleUpdate`, `renderAndCommit`, `reconcile`, `commit`, `flushEffects`로 이어지는 호출 흐름을 정리한 것입니다.
+
+![렌더링 시퀀스 다이어그램](./docs/sequence-diagram.png)
+
 ## 실제 React와의 차이
 
 - 이 구현은 과제 제약에 맞춰 `루트 컴포넌트만 hook/state 사용 가능`하도록 단순화했습니다.
