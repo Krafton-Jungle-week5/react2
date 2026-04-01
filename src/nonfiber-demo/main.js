@@ -1,4 +1,4 @@
-import { FunctionComponent, h, useEffect, useMemo, useState } from '../index.js';
+import { FunctionComponent, h, useEffect, useMemo, useState } from '../nonfiber/index.js';
 import './styles.css';
 
 const WINNING_LINES = [
@@ -13,7 +13,7 @@ const WINNING_LINES = [
 ];
 
 function App() {
-  const [history, setHistory] = useState([createEmptyBoard()]);
+  const [history, setHistory] = useState([createBoard()]);
   const [stepIndex, setStepIndex] = useState(0);
   const [xIsNext, setXIsNext] = useState(true);
   const [score, setScore] = useState({ x: 0, o: 0, draws: 0 });
@@ -30,22 +30,22 @@ function App() {
 
   const statusText = useMemo(() => {
     if (result.winner) {
-      return `${result.winner} wins the round.`;
+      return `${result.winner} wins this round.`;
     }
 
     if (result.isDraw) {
       return 'Draw game. Reset the board or jump to an earlier move.';
     }
 
-    return `${xIsNext ? 'X' : 'O'} turn. Choose a square.`;
+    return `${xIsNext ? 'X' : 'O'} turn. Pick an empty square.`;
   }, [result.isDraw, result.winner, xIsNext]);
 
   useEffect(() => {
     document.title = result.winner
-      ? `Tic-Tac-Toe - ${result.winner} won`
+      ? `Non-Fiber Tic-Tac-Toe - ${result.winner} won`
       : result.isDraw
-        ? 'Tic-Tac-Toe - Draw'
-        : `Tic-Tac-Toe - ${xIsNext ? 'X' : 'O'} turn`;
+        ? 'Non-Fiber Tic-Tac-Toe - Draw'
+        : `Non-Fiber Tic-Tac-Toe - ${xIsNext ? 'X' : 'O'} turn`;
   }, [result.isDraw, result.winner, xIsNext]);
 
   const handleSquareClick = (index) => {
@@ -54,8 +54,8 @@ function App() {
     }
 
     const nextBoard = [...board];
-    const nextToken = xIsNext ? 'X' : 'O';
-    nextBoard[index] = nextToken;
+    const token = xIsNext ? 'X' : 'O';
+    nextBoard[index] = token;
 
     const nextHistory = history.slice(0, stepIndex + 1).concat([nextBoard]);
     const nextResult = calculateResult(nextBoard);
@@ -86,7 +86,7 @@ function App() {
   };
 
   const resetBoard = () => {
-    setHistory([createEmptyBoard()]);
+    setHistory([createBoard()]);
     setStepIndex(0);
     setXIsNext(true);
   };
@@ -105,15 +105,15 @@ function App() {
       h(
         'div',
         { class: 'hero-copy' },
-        h('p', { class: 'eyebrow' }, 'React2 Demo'),
-        h('h1', { class: 'hero-title' }, 'Tic-Tac-Toe Playground'),
+        h('p', { class: 'eyebrow' }, 'Hooks Without Fiber'),
+        h('h1', { class: 'hero-title' }, 'Tic-Tac-Toe'),
         h(
           'p',
           { class: 'hero-description' },
-          'The old experiment screen has been replaced with a simple game that proves state updates, memoized winner checks, effects, and rerendering on top of the custom React2 runtime.',
+          'This demo uses the codex-week5-hooks-demo style runtime: hooks at the root, Virtual DOM diff/patch in vdom.js, and no fiber reconciliation layer.',
         ),
       ),
-      h(StatusPanel, {
+      h(StatusCard, {
         moveCount,
         statusText,
         winner: result.winner,
@@ -122,13 +122,13 @@ function App() {
     ),
     h(
       'section',
-      { class: 'game-layout' },
+      { class: 'content-grid' },
       h(
         'section',
         { class: 'board-panel' },
         h(
           'div',
-          { class: 'section-heading' },
+          { class: 'section-head' },
           h(
             'div',
             {},
@@ -142,30 +142,29 @@ function App() {
             h('strong', {}, `${moveCount}/9`),
           ),
         ),
-        h(Board, {
-          board,
-          onSquareClick: handleSquareClick,
-          winningLine: result.winningLine,
-        }),
+        h(
+          'div',
+          { class: 'board-grid' },
+          ...board.map((value, index) =>
+            h(Square, {
+              index,
+              isWinning: result.winningLine.includes(index),
+              onClick: () => handleSquareClick(index),
+              value,
+            }),
+          ),
+        ),
         h(
           'div',
           { class: 'button-row' },
           h(
             'button',
-            {
-              class: 'primary-button',
-              onClick: resetBoard,
-              type: 'button',
-            },
+            { class: 'primary-button', onClick: resetBoard, type: 'button' },
             'Reset Board',
           ),
           h(
             'button',
-            {
-              class: 'ghost-button',
-              onClick: resetEverything,
-              type: 'button',
-            },
+            { class: 'ghost-button', onClick: resetEverything, type: 'button' },
             'Reset Score',
           ),
         ),
@@ -174,23 +173,15 @@ function App() {
         'aside',
         { class: 'side-panel' },
         h(ScoreCard, { score }),
-        h(GuideCard, { renderCount: history.length - 1 }),
-        h(HistoryCard, {
-          history,
-          stepIndex,
-          onJump: jumpToStep,
-        }),
+        h(RuntimeCard, { historyLength: history.length, moveCount }),
+        h(HistoryCard, { history, onJump: jumpToStep, stepIndex }),
       ),
     ),
   );
 }
 
-function StatusPanel({ moveCount, statusText, winner, xIsNext }) {
-  const badgeClass = winner
-    ? 'status-badge is-win'
-    : xIsNext
-      ? 'status-badge is-x'
-      : 'status-badge is-o';
+function StatusCard({ moveCount, statusText, winner, xIsNext }) {
+  const badgeClass = winner ? 'status-badge is-win' : xIsNext ? 'status-badge is-x' : 'status-badge is-o';
   const badgeText = winner || (xIsNext ? 'X TURN' : 'O TURN');
 
   return h(
@@ -198,31 +189,12 @@ function StatusPanel({ moveCount, statusText, winner, xIsNext }) {
     { class: 'status-card' },
     h('span', { class: badgeClass }, badgeText),
     h('strong', { class: 'status-title' }, statusText),
-    h('p', { class: 'status-caption' }, `${moveCount} squares are filled in the current round.`),
-  );
-}
-
-function Board({ board, onSquareClick, winningLine }) {
-  return h(
-    'section',
-    { class: 'board-grid' },
-    ...board.map((value, index) =>
-      h(Square, {
-        index,
-        isWinning: winningLine.includes(index),
-        onClick: () => onSquareClick(index),
-        value,
-      }),
-    ),
+    h('p', { class: 'status-caption' }, `${moveCount} squares are currently filled.`),
   );
 }
 
 function Square({ index, isWinning, onClick, value }) {
-  const className = [
-    'square-button',
-    value ? `is-${value.toLowerCase()}` : '',
-    isWinning ? 'is-winning' : '',
-  ]
+  const className = ['square-button', value ? `is-${value.toLowerCase()}` : '', isWinning ? 'is-winning' : '']
     .filter(Boolean)
     .join(' ');
 
@@ -262,17 +234,18 @@ function ScoreItem({ label, value }) {
   );
 }
 
-function GuideCard({ renderCount }) {
+function RuntimeCard({ historyLength, moveCount }) {
   return h(
     'section',
     { class: 'info-card' },
-    h('p', { class: 'panel-kicker' }, 'Runtime Notes'),
+    h('p', { class: 'panel-kicker' }, 'Architecture'),
     h(
       'ul',
       { class: 'guide-list' },
-      h('li', {}, 'All hooks live in the root App component because this runtime only supports root-level hooks.'),
-      h('li', {}, 'Winner detection and move count are memoized with useMemo.'),
-      h('li', {}, `The board has rerendered through ${renderCount} committed move${renderCount === 1 ? '' : 's'}.`),
+      h('li', {}, 'Hooks live only in the root App component.'),
+      h('li', {}, 'State changes schedule rerenders through runtime.js.'),
+      h('li', {}, 'DOM updates flow through vdom.patchDom(), not fiber reconcile/commit.'),
+      h('li', {}, `The current history stack has ${historyLength} snapshot${historyLength === 1 ? '' : 's'} after ${moveCount} played moves.`),
     ),
   );
 }
@@ -294,22 +267,21 @@ function HistoryCard({ history, onJump, stepIndex }) {
             onClick: () => onJump(index),
             type: 'button',
           },
-          buildHistoryLabel(history, index),
+          describeMove(history, board, index),
         ),
       ),
     ),
   );
 }
 
-function buildHistoryLabel(history, index) {
+function describeMove(history, board, index) {
   if (index === 0) {
     return 'Go to game start';
   }
 
-  const currentBoard = history[index];
   const previousBoard = history[index - 1];
-  const changedIndex = currentBoard.findIndex((cell, cellIndex) => cell !== previousBoard[cellIndex]);
-  const token = changedIndex >= 0 ? currentBoard[changedIndex] : '';
+  const changedIndex = board.findIndex((cell, cellIndex) => cell !== previousBoard[cellIndex]);
+  const token = changedIndex >= 0 ? board[changedIndex] : '';
 
   if (!token) {
     return `Go to move ${index}`;
@@ -320,10 +292,10 @@ function buildHistoryLabel(history, index) {
 
 function calculateResult(board) {
   for (const line of WINNING_LINES) {
-    const [first, second, third] = line;
-    if (board[first] && board[first] === board[second] && board[first] === board[third]) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
       return {
-        winner: board[first],
+        winner: board[a],
         winningLine: line,
         isDraw: false,
       };
@@ -337,7 +309,7 @@ function calculateResult(board) {
   };
 }
 
-function createEmptyBoard() {
+function createBoard() {
   return Array(9).fill('');
 }
 

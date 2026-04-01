@@ -11,7 +11,7 @@ function normalizeHtml(html) {
   return html.replace(/\s+</g, '<').replace(/>\s+/g, '>').trim();
 }
 
-describe('Virtual DOM patch engine', () => {
+describe('Virtual DOM diff and patch engine', () => {
   it('converts DOM into a normalized virtual tree', () => {
     const tree = parseHtmlToVNode(`
       <section>
@@ -27,7 +27,7 @@ describe('Virtual DOM patch engine', () => {
     expect(tree.children[0].children[1].tag).toBe('p');
   });
 
-  it('creates diff operations for changed props, text, and inserted nodes', () => {
+  it('creates prop, text, and insertion operations during diffing', () => {
     const previousTree = parseHtmlToVNode(`
       <div class="before">
         <p>old text</p>
@@ -41,14 +41,35 @@ describe('Virtual DOM patch engine', () => {
     `);
 
     const operations = diffTrees(previousTree, nextTree);
-    const operationTypes = operations.map((operation) => operation.type);
+    const types = operations.map((operation) => operation.type);
 
-    expect(operationTypes).toContain('UPDATE_PROPS');
-    expect(operationTypes).toContain('UPDATE_TEXT');
-    expect(operationTypes).toContain('INSERT_CHILD');
+    expect(types).toContain('UPDATE_PROPS');
+    expect(types).toContain('UPDATE_TEXT');
+    expect(types).toContain('INSERT_CHILD');
   });
 
-  it('patches changed props, text, and inserted nodes', () => {
+  it('uses move operations for keyed child reordering', () => {
+    const previousTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+        <li data-key="c">C</li>
+      </ul>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="c">C</li>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+      </ul>
+    `);
+
+    const operations = diffTrees(previousTree, nextTree);
+
+    expect(operations.some((operation) => operation.type === 'MOVE_CHILD')).toBe(true);
+  });
+
+  it('patches the DOM so it matches the next tree', () => {
     const container = document.createElement('div');
     const previousTree = parseHtmlToVNode(`
       <div class="before">
@@ -68,27 +89,6 @@ describe('Virtual DOM patch engine', () => {
     expect(normalizeHtml(container.innerHTML)).toBe(
       normalizeHtml(serializeVNodeToHtml(nextTree)),
     );
-  });
-
-  it('creates move operations for keyed child reordering', () => {
-    const previousTree = parseHtmlToVNode(`
-      <ul>
-        <li data-key="a">A</li>
-        <li data-key="b">B</li>
-        <li data-key="c">C</li>
-      </ul>
-    `);
-    const nextTree = parseHtmlToVNode(`
-      <ul>
-        <li data-key="c">C</li>
-        <li data-key="a">A</li>
-        <li data-key="b">B</li>
-      </ul>
-    `);
-
-    const operations = diffTrees(previousTree, nextTree);
-
-    expect(operations.some((operation) => operation.type === 'MOVE_CHILD')).toBe(true);
   });
 
   it('patches keyed child moves so actual DOM matches the next tree', () => {
@@ -116,7 +116,7 @@ describe('Virtual DOM patch engine', () => {
     );
   });
 
-  it('patches removed child nodes so actual DOM matches the next tree', () => {
+  it('removes nodes that disappear from the next tree', () => {
     const container = document.createElement('div');
     const previousTree = parseHtmlToVNode(`
       <ul>

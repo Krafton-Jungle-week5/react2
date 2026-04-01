@@ -1,11 +1,12 @@
 {
   "name": "react2-vdom",
   "version": "0.1.0",
-  "description": "Reusable virtual DOM parser, patcher, and root hooks runtime.",
+  "description": "Reusable virtual DOM diff and patch engine with root-level hooks and demo apps.",
   "keywords": [
     "virtual-dom",
     "dom-diff",
-    "dom"
+    "dom",
+    "hooks"
   ],
   "license": "MIT",
   "type": "module",
