@@ -1,6 +1,6 @@
-﻿# react2
+# react2
 
-React의 핵심 개념인 Component, State, Hooks를 4주차에 구현했던 Virtual DOM 위에 구현한 학습형 프로젝트입니다.
+React의 핵심 개념인 Component, State, Hooks를 4주차에 구현했던 Virtual DOM 위에 확장한 학습형 프로젝트입니다.
 
 ## 1. 핵심 구현 내용
 
@@ -55,12 +55,6 @@ src/
   lib/
     runtime.js             # FunctionComponent, Hooks, 스케줄링
     vdom.js                # VDOM 생성, diff, patch
-  nonfiber/
-    index.js
-    runtime.js
-    vdom.js
-  nonfiber-demo/
-    main.js                # non-fiber 데모 진입점
   tic-tac-toe/
     model.js               # 게임 상태 전이/승패 계산
 tests/
