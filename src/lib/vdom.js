@@ -31,6 +31,7 @@ const VOID_TAGS = new Set([
 ]);
 
 const PRESERVE_WHITESPACE_TAGS = new Set(['code', 'pre', 'textarea']);
+const DOM_EVENT_HANDLERS = Symbol('react2:event-handlers');
 
 export function createRootVNode(children = []) {
   return {
@@ -225,6 +226,21 @@ export function mountVNode(container, node) {
 }
 
 export function setDomAttribute(element, name, value) {
+  if (isEventAttribute(name, value)) {
+    const eventName = name.slice(2).toLowerCase();
+    const handlers = element[DOM_EVENT_HANDLERS] || {};
+    const previousHandler = handlers[eventName];
+
+    if (previousHandler) {
+      element.removeEventListener(eventName, previousHandler);
+    }
+
+    element.addEventListener(eventName, value);
+    handlers[eventName] = value;
+    element[DOM_EVENT_HANDLERS] = handlers;
+    return;
+  }
+
   if (name === 'checked') {
     element.checked = true;
     element.setAttribute('checked', '');
@@ -244,6 +260,19 @@ export function setDomAttribute(element, name, value) {
 }
 
 export function removeDomAttribute(element, name) {
+  if (isEventAttribute(name, element[DOM_EVENT_HANDLERS]?.[name.slice(2).toLowerCase()])) {
+    const eventName = name.slice(2).toLowerCase();
+    const handlers = element[DOM_EVENT_HANDLERS];
+    const previousHandler = handlers?.[eventName];
+
+    if (previousHandler) {
+      element.removeEventListener(eventName, previousHandler);
+      delete handlers[eventName];
+    }
+
+    return;
+  }
+
   if (name === 'checked') {
     element.checked = false;
   }
@@ -269,6 +298,7 @@ function serializeNode(node, depth) {
   }
 
   const attrs = Object.entries(node.attrs || {})
+    .filter(([, value]) => typeof value !== 'function')
     .map(([name, value]) => {
       if (value === '') {
         return name;
@@ -320,6 +350,10 @@ function escapeText(text) {
 
 function escapeAttribute(text) {
   return escapeText(text).replaceAll('"', '&quot;');
+}
+
+function isEventAttribute(name, value) {
+  return name.startsWith('on') && typeof value === 'function';
 }
 
 export function countVNodeStats(tree) {

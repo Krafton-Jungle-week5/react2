@@ -7,7 +7,7 @@ const y = /* @__PURE__ */ new Set([
   "object",
   "script",
   "style"
-]), E = /* @__PURE__ */ new Set([
+]), T = /* @__PURE__ */ new Set([
   "area",
   "base",
   "br",
@@ -22,14 +22,14 @@ const y = /* @__PURE__ */ new Set([
   "source",
   "track",
   "wbr"
-]), T = /* @__PURE__ */ new Set(["code", "pre", "textarea"]);
-function h(t = []) {
+]), v = /* @__PURE__ */ new Set(["code", "pre", "textarea"]), s = Symbol("react2:event-handlers");
+function E(t = []) {
   return {
     type: "root",
     children: t
   };
 }
-function d(t) {
+function x(t) {
   return t ? t.type === "text" ? {
     type: "text",
     value: t.value
@@ -37,32 +37,32 @@ function d(t) {
     type: t.type,
     tag: t.tag,
     attrs: t.attrs ? { ...t.attrs } : void 0,
-    children: t.children ? t.children.map(d) : []
+    children: t.children ? t.children.map(x) : []
   } : null;
 }
-function D(t, e = document) {
+function L(t, e = document) {
   const r = e.createElement("template");
-  return r.innerHTML = t, o(r.content);
+  return r.innerHTML = t, l(r.content);
 }
-function o(t) {
-  return t ? t.nodeType === 11 ? h(
-    Array.from(t.childNodes).map((e) => o(e)).filter(Boolean)
-  ) : t.nodeType === 1 ? g(t) : t.nodeType === 3 ? x(t) : null : null;
+function l(t) {
+  return t ? t.nodeType === 11 ? E(
+    Array.from(t.childNodes).map((e) => l(e)).filter(Boolean)
+  ) : t.nodeType === 1 ? A(t) : t.nodeType === 3 ? g(t) : null : null;
 }
-function k(t) {
-  return h(
-    Array.from(t.childNodes).map((e) => o(e)).filter(Boolean)
+function V(t) {
+  return E(
+    Array.from(t.childNodes).map((e) => l(e)).filter(Boolean)
   );
 }
-function x(t) {
+function g(t) {
   var n, a;
   const e = t.textContent ?? "", r = (a = (n = t.parentElement) == null ? void 0 : n.tagName) == null ? void 0 : a.toLowerCase();
-  return !T.has(r) && e.trim() === "" ? null : {
+  return !v.has(r) && e.trim() === "" ? null : {
     type: "text",
     value: e
   };
 }
-function g(t) {
+function A(t) {
   const e = t.tagName.toLowerCase();
   if (y.has(e))
     return null;
@@ -76,7 +76,7 @@ function g(t) {
     type: "element",
     tag: e,
     attrs: r,
-    children: Array.from(t.childNodes).map((n) => o(n)).filter(Boolean)
+    children: Array.from(t.childNodes).map((n) => l(n)).filter(Boolean)
   };
 }
 function $(t, e) {
@@ -89,34 +89,39 @@ function $(t, e) {
   }
   return e === "textarea" && (r.value = t.value ?? ""), e === "option" && (t.selected ? r.selected = "" : delete r.selected), r;
 }
-function A(t) {
+function b(t) {
   var e, r;
   return !t || t.type !== "element" ? null : ((e = t.attrs) == null ? void 0 : e["data-key"]) || ((r = t.attrs) == null ? void 0 : r.id) || null;
 }
-function s(t, e = document) {
+function f(t, e = document) {
   var n;
   if (t.type === "root") {
     const a = e.createDocumentFragment();
-    for (const c of t.children)
-      a.append(s(c, e));
+    for (const i of t.children)
+      a.append(f(i, e));
     return a;
   }
   if (t.type === "text")
     return e.createTextNode(t.value);
   const r = e.createElement(t.tag);
-  for (const [a, c] of Object.entries(t.attrs || {}))
-    v(r, a, c);
+  for (const [a, i] of Object.entries(t.attrs || {}))
+    D(r, a, i);
   if (t.tag === "textarea")
     return r.value = ((n = t.attrs) == null ? void 0 : n.value) ?? "", r;
   for (const a of t.children || [])
-    r.append(s(a, e));
+    r.append(f(a, e));
   return r;
 }
-function V(t, e) {
-  const r = t.ownerDocument || document, n = s(e, r);
+function _(t, e) {
+  const r = t.ownerDocument || document, n = f(e, r);
   t.replaceChildren(n);
 }
-function v(t, e, r) {
+function D(t, e, r) {
+  if (m(e, r)) {
+    const n = e.slice(2).toLowerCase(), a = t[s] || {}, i = a[n];
+    i && t.removeEventListener(n, i), t.addEventListener(n, r), a[n] = r, t[s] = a;
+    return;
+  }
   if (e === "checked") {
     t.checked = !0, t.setAttribute("checked", "");
     return;
@@ -127,43 +132,52 @@ function v(t, e, r) {
   }
   t.setAttribute(e, r ?? "");
 }
-function O(t, e) {
+function w(t, e) {
+  var r;
+  if (m(e, (r = t[s]) == null ? void 0 : r[e.slice(2).toLowerCase()])) {
+    const n = e.slice(2).toLowerCase(), a = t[s], i = a == null ? void 0 : a[n];
+    i && (t.removeEventListener(n, i), delete a[n]);
+    return;
+  }
   e === "checked" && (t.checked = !1), e === "value" && (t.value = ""), t.removeAttribute(e);
 }
-function _(t) {
-  return t.type === "root" ? t.children.map((e) => f(e, 0)).join(`
-`) : f(t, 0);
+function C(t) {
+  return t.type === "root" ? t.children.map((e) => p(e, 0)).join(`
+`) : p(t, 0);
 }
-function f(t, e) {
-  var c, p;
+function p(t, e) {
+  var i, h;
   if (t.type === "text")
-    return `${i(e)}${l(t.value)}`;
-  const r = Object.entries(t.attrs || {}).map(([u, m]) => m === "" ? u : `${u}="${b(m)}"`).join(" "), n = r ? `<${t.tag} ${r}>` : `<${t.tag}>`;
+    return `${c(e)}${o(t.value)}`;
+  const r = Object.entries(t.attrs || {}).filter(([, u]) => typeof u != "function").map(([u, N]) => N === "" ? u : `${u}="${k(N)}"`).join(" "), n = r ? `<${t.tag} ${r}>` : `<${t.tag}>`;
   if (t.tag === "textarea")
-    return `${i(e)}${n}${l(((c = t.attrs) == null ? void 0 : c.value) ?? "")}</${t.tag}>`;
-  if (E.has(t.tag))
-    return `${i(e)}${n}`;
-  if (!((p = t.children) != null && p.length))
-    return `${i(e)}${n}</${t.tag}>`;
+    return `${c(e)}${n}${o(((i = t.attrs) == null ? void 0 : i.value) ?? "")}</${t.tag}>`;
+  if (T.has(t.tag))
+    return `${c(e)}${n}`;
+  if (!((h = t.children) != null && h.length))
+    return `${c(e)}${n}</${t.tag}>`;
   if (t.children.length === 1 && t.children[0].type === "text" && t.children[0].value.length <= 48 && !t.children[0].value.includes(`
 `))
-    return `${i(e)}${n}${l(t.children[0].value)}</${t.tag}>`;
-  const a = t.children.map((u) => f(u, e + 1)).join(`
+    return `${c(e)}${n}${o(t.children[0].value)}</${t.tag}>`;
+  const a = t.children.map((u) => p(u, e + 1)).join(`
 `);
-  return `${i(e)}${n}
+  return `${c(e)}${n}
 ${a}
-${i(e)}</${t.tag}>`;
+${c(e)}</${t.tag}>`;
 }
-function i(t) {
+function c(t) {
   return "  ".repeat(t);
 }
-function l(t) {
+function o(t) {
   return String(t).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
-function b(t) {
-  return l(t).replaceAll('"', "&quot;");
+function k(t) {
+  return o(t).replaceAll('"', "&quot;");
 }
-function w(t) {
+function m(t, e) {
+  return t.startsWith("on") && typeof e == "function";
+}
+function O(t) {
   const e = {
     totalNodes: 0,
     elements: 0,
@@ -171,7 +185,7 @@ function w(t) {
     keyedElements: 0,
     maxDepth: 0
   };
-  return N(t, 0, (r, n) => {
+  return d(t, 0, (r, n) => {
     if (r.type === "root") {
       e.maxDepth = Math.max(e.maxDepth, n);
       return;
@@ -180,26 +194,26 @@ function w(t) {
       e.textNodes += 1;
       return;
     }
-    e.elements += 1, A(r) && (e.keyedElements += 1);
+    e.elements += 1, b(r) && (e.keyedElements += 1);
   }), e;
 }
-function N(t, e, r) {
+function d(t, e, r) {
   var n;
   if (r(t, e), !!((n = t.children) != null && n.length))
     for (const a of t.children)
-      N(a, e + 1, r);
+      d(a, e + 1, r);
 }
 export {
-  d as cloneVNode,
-  w as countVNodeStats,
-  h as createRootVNode,
-  o as domNodeToVNode,
-  k as domNodeToVNodeTree,
-  A as getVNodeKey,
-  V as mountVNode,
-  D as parseHtmlToVNode,
-  O as removeDomAttribute,
-  s as renderVNode,
-  _ as serializeVNodeToHtml,
-  v as setDomAttribute
+  x as cloneVNode,
+  O as countVNodeStats,
+  E as createRootVNode,
+  l as domNodeToVNode,
+  V as domNodeToVNodeTree,
+  b as getVNodeKey,
+  _ as mountVNode,
+  L as parseHtmlToVNode,
+  w as removeDomAttribute,
+  f as renderVNode,
+  C as serializeVNodeToHtml,
+  D as setDomAttribute
 };
