@@ -1,0 +1,133 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 15px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .laneTitle { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .label { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #1e293b; }
+      .small { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .groupLabel { font: 700 14px 'Segoe UI', Arial, sans-serif; fill: #1d4ed8; }
+      .note { font: 600 12px 'Segoe UI', Arial, sans-serif; fill: #854d0e; }
+      .box { fill: #f8fafc; stroke: #94a3b8; stroke-width: 1.5; rx: 10; }
+      .noteBox { fill: #fef3c7; stroke: #f59e0b; stroke-width: 1.2; rx: 8; }
+      .groupBox { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2; stroke-dasharray: 8 5; rx: 12; }
+      .lane { stroke: #cbd5e1; stroke-width: 2; }
+      .arrow { stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+      .return { stroke: #64748b; stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="980" fill="#ffffff"/>
+
+  <text x="70" y="48" class="title">Button Click Update Flow</text>
+  <text x="70" y="76" class="subtitle">Based on the latest code in codex-week5-hooks-demo. This diagram shows the update path after the page is already mounted.</text>
+
+  <g transform="translate(40,110)">
+    <rect x="0" y="0" width="140" height="42" class="box"/>
+    <text x="70" y="26" text-anchor="middle" class="laneTitle">사용자</text>
+
+    <rect x="170" y="0" width="140" height="42" class="box"/>
+    <text x="240" y="26" text-anchor="middle" class="laneTitle">실제 DOM</text>
+
+    <rect x="340" y="0" width="150" height="42" class="box"/>
+    <text x="415" y="26" text-anchor="middle" class="laneTitle">이벤트 핸들러</text>
+
+    <rect x="520" y="0" width="160" height="42" class="box"/>
+    <text x="600" y="26" text-anchor="middle" class="laneTitle">useState setter</text>
+
+    <rect x="710" y="0" width="180" height="42" class="box"/>
+    <text x="800" y="26" text-anchor="middle" class="laneTitle">FunctionComponent</text>
+
+    <rect x="920" y="0" width="150" height="42" class="box"/>
+    <text x="995" y="26" text-anchor="middle" class="laneTitle">renderFn(App)</text>
+
+    <rect x="1100" y="0" width="100" height="42" class="box"/>
+    <text x="1150" y="26" text-anchor="middle" class="laneTitle">h()</text>
+
+    <rect x="1230" y="0" width="130" height="42" class="box"/>
+    <text x="1295" y="26" text-anchor="middle" class="laneTitle">diffTrees</text>
+
+    <rect x="1390" y="0" width="130" height="42" class="box"/>
+    <text x="1455" y="26" text-anchor="middle" class="laneTitle">patchDom</text>
+
+    <line x1="70" y1="42" x2="70" y2="830" class="lane"/>
+    <line x1="240" y1="42" x2="240" y2="830" class="lane"/>
+    <line x1="415" y1="42" x2="415" y2="830" class="lane"/>
+    <line x1="600" y1="42" x2="600" y2="830" class="lane"/>
+    <line x1="800" y1="42" x2="800" y2="830" class="lane"/>
+    <line x1="995" y1="42" x2="995" y2="830" class="lane"/>
+    <line x1="1150" y1="42" x2="1150" y2="830" class="lane"/>
+    <line x1="1295" y1="42" x2="1295" y2="830" class="lane"/>
+    <line x1="1455" y1="42" x2="1455" y2="830" class="lane"/>
+
+    <line x1="70" y1="95" x2="240" y2="95" class="arrow"/>
+    <text x="155" y="86" text-anchor="middle" class="label">클릭 / 입력</text>
+
+    <line x1="240" y1="140" x2="415" y2="140" class="arrow"/>
+    <text x="327" y="131" text-anchor="middle" class="label">브라우저 이벤트 전달</text>
+
+    <line x1="415" y1="185" x2="600" y2="185" class="arrow"/>
+    <text x="507" y="176" text-anchor="middle" class="label">setState(nextValue)</text>
+
+    <line x1="600" y1="230" x2="800" y2="230" class="arrow"/>
+    <text x="700" y="221" text-anchor="middle" class="label">queue에 저장 + scheduleUpdate()</text>
+
+    <rect x="710" y="248" width="180" height="34" class="noteBox"/>
+    <text x="800" y="270" text-anchor="middle" class="note">microtask로 update 예약</text>
+
+    <path d="M800 300 C845 300, 845 345, 800 345" class="arrow"/>
+    <text x="850" y="327" class="label">update()</text>
+
+    <path d="M800 365 C855 365, 855 410, 800 410" class="arrow"/>
+    <text x="865" y="392" class="label">renderAndCommit()</text>
+
+    <line x1="800" y1="445" x2="600" y2="445" class="arrow"/>
+    <text x="700" y="436" text-anchor="middle" class="label">hookIndex 초기화</text>
+
+    <line x1="800" y1="490" x2="995" y2="490" class="arrow"/>
+    <text x="897" y="481" text-anchor="middle" class="label">App(props) 다시 실행</text>
+
+    <line x1="995" y1="530" x2="600" y2="530" class="arrow"/>
+    <text x="797" y="521" text-anchor="middle" class="label">useState()로 queue 적용</text>
+
+    <line x1="995" y1="565" x2="600" y2="565" class="arrow"/>
+    <text x="797" y="556" text-anchor="middle" class="label">useMemo() deps 비교 후 계산</text>
+
+    <line x1="995" y1="600" x2="600" y2="600" class="arrow"/>
+    <text x="797" y="591" text-anchor="middle" class="label">useEffect() pendingEffects 등록</text>
+
+    <line x1="995" y1="645" x2="1150" y2="645" class="arrow"/>
+    <text x="1072" y="636" text-anchor="middle" class="label">h()로 새 VNode 생성</text>
+
+    <line x1="1150" y1="685" x2="800" y2="685" class="return"/>
+    <text x="975" y="676" text-anchor="middle" class="label">nextTree 반환</text>
+
+    <g>
+      <rect x="1210" y="718" width="330" height="95" class="groupBox"/>
+      <text x="1228" y="740" class="groupLabel">patchDom 내부 처리</text>
+      <text x="1228" y="758" class="small">diff 계산 후 patch 연산을 정렬하고 적용</text>
+
+      <line x1="800" y1="770" x2="1455" y2="770" class="arrow"/>
+      <text x="1128" y="761" text-anchor="middle" class="label">patchDom(container, currentTree, nextTree)</text>
+
+      <line x1="1455" y1="798" x2="1295" y2="798" class="arrow"/>
+      <text x="1375" y="789" text-anchor="middle" class="small">diffTrees(previousTree, nextTree)</text>
+
+      <line x1="1295" y1="826" x2="1455" y2="826" class="return"/>
+      <text x="1375" y="817" text-anchor="middle" class="small">operations 반환</text>
+
+      <text x="1455" y="848" text-anchor="middle" class="small">sortPatchOperations()</text>
+      <text x="1455" y="867" text-anchor="middle" class="small">applyPatchOperations()</text>
+      <line x1="1455" y1="882" x2="240" y2="882" class="arrow"/>
+    </g>
+
+    <path d="M800 900 C850 900, 850 938, 800 938" class="arrow"/>
+    <text x="860" y="923" class="label">flushEffects()</text>
+
+    <line x1="800" y1="958" x2="600" y2="958" class="arrow"/>
+    <text x="700" y="949" text-anchor="middle" class="label">cleanup 실행 후 effect 실행</text>
+  </g>
+</svg>

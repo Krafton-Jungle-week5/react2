@@ -123,7 +123,7 @@ button {
   margin: 0;
 }
 
-.game-layout {
+.content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 20px;
@@ -133,7 +133,7 @@ button {
   padding: 24px;
 }
 
-.section-heading,
+.section-head,
 .button-row {
   display: flex;
   align-items: flex-start;
@@ -289,7 +289,7 @@ button {
 
 @media (max-width: 980px) {
   .hero-panel,
-  .game-layout {
+  .content-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -300,7 +300,7 @@ button {
     padding-top: 24px;
   }
 
-  .section-heading,
+  .section-head,
   .button-row {
     flex-direction: column;
     align-items: flex-start;

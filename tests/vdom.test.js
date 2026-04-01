@@ -1,22 +1,17 @@
 import {
+  diffTrees,
   domNodeToVNodeTree,
   mountVNode,
+  patchDom,
   parseHtmlToVNode,
   serializeVNodeToHtml,
 } from '../src/lib/vdom.js';
-import {
-  ChildDeletion,
-  Placement,
-  Update,
-  commitRoot,
-  reconcileTrees,
-} from '../src/lib/fiber.js';
 
 function normalizeHtml(html) {
   return html.replace(/\s+</g, '<').replace(/>\s+/g, '>').trim();
 }
 
-describe('Virtual DOM + Fiber commit engine', () => {
+describe('Virtual DOM diff and patch engine', () => {
   it('converts DOM into a normalized virtual tree', () => {
     const tree = parseHtmlToVNode(`
       <section>
@@ -32,7 +27,7 @@ describe('Virtual DOM + Fiber commit engine', () => {
     expect(tree.children[0].children[1].tag).toBe('p');
   });
 
-  it('creates placement and update effects during reconciliation', () => {
+  it('creates prop, text, and insertion operations during diffing', () => {
     const previousTree = parseHtmlToVNode(`
       <div class="before">
         <p>old text</p>
@@ -45,18 +40,15 @@ describe('Virtual DOM + Fiber commit engine', () => {
       </div>
     `);
 
-    const work = reconcileTrees(previousTree, nextTree);
-    const types = work.effects.map((effect) => effect.opType);
-    const flags = work.effects.map((effect) => effect.flags);
+    const operations = diffTrees(previousTree, nextTree);
+    const types = operations.map((operation) => operation.type);
 
     expect(types).toContain('UPDATE_PROPS');
     expect(types).toContain('UPDATE_TEXT');
     expect(types).toContain('INSERT_CHILD');
-    expect(flags).toContain(Update);
-    expect(flags).toContain(Placement);
   });
 
-  it('uses placement effects for keyed child moves', () => {
+  it('uses move operations for keyed child reordering', () => {
     const previousTree = parseHtmlToVNode(`
       <ul>
         <li data-key="a">A</li>
@@ -72,33 +64,12 @@ describe('Virtual DOM + Fiber commit engine', () => {
       </ul>
     `);
 
-    const work = reconcileTrees(previousTree, nextTree);
-    const moveEffect = work.effects.find((effect) => effect.opType === 'MOVE_CHILD');
+    const operations = diffTrees(previousTree, nextTree);
 
-    expect(moveEffect).toBeDefined();
-    expect(moveEffect.flags).toBe(Placement);
+    expect(operations.some((operation) => operation.type === 'MOVE_CHILD')).toBe(true);
   });
 
-  it('marks parent fibers with child deletion flags when nodes are removed', () => {
-    const previousTree = parseHtmlToVNode(`
-      <ul>
-        <li data-key="a">A</li>
-        <li data-key="b">B</li>
-      </ul>
-    `);
-    const nextTree = parseHtmlToVNode(`
-      <ul>
-        <li data-key="a">A</li>
-      </ul>
-    `);
-
-    const work = reconcileTrees(previousTree, nextTree);
-
-    expect(work.effects.some((effect) => effect.flags === ChildDeletion)).toBe(true);
-    expect(work.rootFiber.child.flags & ChildDeletion).toBe(ChildDeletion);
-  });
-
-  it('commits fiber effects so actual DOM matches the new tree', () => {
+  it('patches the DOM so it matches the next tree', () => {
     const container = document.createElement('div');
     const previousTree = parseHtmlToVNode(`
       <div class="before">
@@ -113,9 +84,54 @@ describe('Virtual DOM + Fiber commit engine', () => {
     `);
 
     mountVNode(container, previousTree);
+    patchDom(container, previousTree, nextTree);
 
-    const work = reconcileTrees(previousTree, nextTree);
-    commitRoot(container, work.rootFiber);
+    expect(normalizeHtml(container.innerHTML)).toBe(
+      normalizeHtml(serializeVNodeToHtml(nextTree)),
+    );
+  });
+
+  it('patches keyed child moves so actual DOM matches the next tree', () => {
+    const container = document.createElement('div');
+    const previousTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+        <li data-key="c">C</li>
+      </ul>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="c">C</li>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+      </ul>
+    `);
+
+    mountVNode(container, previousTree);
+    patchDom(container, previousTree, nextTree);
+
+    expect(normalizeHtml(container.innerHTML)).toBe(
+      normalizeHtml(serializeVNodeToHtml(nextTree)),
+    );
+  });
+
+  it('removes nodes that disappear from the next tree', () => {
+    const container = document.createElement('div');
+    const previousTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+        <li data-key="b">B</li>
+      </ul>
+    `);
+    const nextTree = parseHtmlToVNode(`
+      <ul>
+        <li data-key="a">A</li>
+      </ul>
+    `);
+
+    mountVNode(container, previousTree);
+    patchDom(container, previousTree, nextTree);
 
     expect(normalizeHtml(container.innerHTML)).toBe(
       normalizeHtml(serializeVNodeToHtml(nextTree)),
@@ -137,6 +153,46 @@ describe('Virtual DOM + Fiber commit engine', () => {
     const inputNode = tree.children[0].children[0];
 
     expect(inputNode.attrs.value).toBe('beta');
+  });
+
+  it('updates function event handlers during patching', () => {
+    const container = document.createElement('div');
+    const clicks = [];
+    const previousTree = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tag: 'button',
+          attrs: {
+            type: 'button',
+            onClick: () => clicks.push('before'),
+          },
+          children: [{ type: 'text', value: 'Click' }],
+        },
+      ],
+    };
+    const nextTree = {
+      type: 'root',
+      children: [
+        {
+          type: 'element',
+          tag: 'button',
+          attrs: {
+            type: 'button',
+            onClick: () => clicks.push('after'),
+          },
+          children: [{ type: 'text', value: 'Click' }],
+        },
+      ],
+    };
+
+    mountVNode(container, previousTree);
+    patchDom(container, previousTree, nextTree);
+
+    container.querySelector('button').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(clicks).toEqual(['after']);
   });
 
   it('preserves inline event attributes in virtual DOM and mounted DOM', () => {
