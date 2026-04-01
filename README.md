@@ -53,6 +53,54 @@ npm run dev
   - 루트 컴포넌트가 생성한 새 Virtual DOM 트리를 기존 트리와 비교합니다.
   - 바뀐 부분만 fiber effect 로 만들고, commit 단계에서 실제 DOM에 반영합니다.
 
+## 렌더링 시퀀스 다이어그램
+
+아래 다이어그램은 현재 구현의 핵심 흐름인 `이벤트 -> setState -> microtask update -> render -> reconcile -> commit -> effect 실행` 순서를 보여줍니다.
+
+```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant D as 실제 DOM
+    participant E as 이벤트 핸들러
+    participant H as Hooks
+    participant FC as FunctionComponent
+    participant R as renderFn(App)
+    participant V as VDOM(h)
+    participant F as Fiber Reconciler
+    participant C as Commit Engine
+
+    U->>D: 클릭 / 입력
+    D->>E: 이벤트 발생
+    E->>H: setState()
+    H->>FC: scheduleUpdate()
+    FC->>FC: microtask에 update 예약
+    FC->>FC: update()
+    FC->>FC: renderAndCommit()
+    FC->>H: hookIndex 초기화
+    FC->>R: App(props) 실행
+    R->>H: useState()
+    R->>H: useMemo()
+    R->>H: useEffect()
+    R->>V: h()로 VNode 생성
+    V-->>FC: nextTree 반환
+
+    alt 첫 렌더
+        FC->>D: mountVNode()
+    else 업데이트 렌더
+        FC->>F: reconcileTrees()
+        F-->>FC: rootFiber + effects
+        FC->>C: commitRoot()
+        C->>D: 필요한 DOM만 변경
+    end
+
+    FC->>FC: currentTree 갱신
+    FC->>H: flushEffects()
+    H->>H: cleanup 실행
+    H->>H: effect 실행
+```
+
+이 구현에서는 같은 이벤트 안에서 여러 번 호출된 `setState`도 한 번의 microtask update로 모아서 처리합니다.
+
 ## 실제 React와의 차이
 
 - 이 구현은 과제 제약에 맞춰 `루트 컴포넌트만 hook/state 사용 가능`하도록 단순화했습니다.
