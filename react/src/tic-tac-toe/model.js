@@ -96,7 +96,7 @@ export function resetBoard(game) {
 
 export function buildHistoryLabel(history, index) {
   if (index === 0) {
-    return 'Go to game start';
+    return '게임 시작으로 이동';
   }
 
   const currentBoard = history[index];
@@ -105,10 +105,10 @@ export function buildHistoryLabel(history, index) {
   const token = changedIndex >= 0 ? currentBoard[changedIndex] : '';
 
   if (!token) {
-    return `Go to move ${index}`;
+    return `${index}번째 수로 이동`;
   }
 
-  return `Go to move ${index} (${token} on ${changedIndex + 1})`;
+  return `${index}번째 수로 이동 (${token}를 ${changedIndex + 1}번 칸에 둠)`;
 }
 
 function updateScore(score, result) {

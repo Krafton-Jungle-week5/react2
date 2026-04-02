@@ -5,7 +5,7 @@ export function createRuntimeInspectorStore() {
     renderCount: 0,
     hooks: [],
     flow: [],
-    patchSummary: '아직 patch 정보가 없습니다.',
+    patchSummary: 'No patch operations yet.',
   };
   const listeners = new Set();
 
@@ -28,26 +28,19 @@ export function mountRuntimeInspector(container, store) {
   function InspectorApp() {
     const [snapshot, setSnapshot] = useState(() => store.getSnapshot());
 
-    useEffect(() => {
-      return store.subscribe((nextSnapshot) => setSnapshot(nextSnapshot));
-    }, []);
+    useEffect(() => store.subscribe((nextSnapshot) => setSnapshot(nextSnapshot)), []);
 
-    return h(
-      'section',
-      { class: 'inspector-shell' },
-      h(HookSlotsCard, {
-        hooks: snapshot.hooks,
-        renderCount: snapshot.renderCount,
-      }),
-    );
+    return h(HookSlotsCard, {
+      hooks: snapshot.hooks,
+      renderCount: snapshot.renderCount,
+    });
   }
 
   return new FunctionComponent(InspectorApp).mount(container);
 }
 
 function HookSlotsCard({ hooks, renderCount }) {
-  const visibleSlots = hooks.filter((hook) => ![1, 2].includes(hook.slot));
-  const comparedHooks = visibleSlots.map((hook, index) => ({
+  const comparedHooks = hooks.map((hook, index) => ({
     ...hook,
     displaySlot: index + 1,
   }));
@@ -55,12 +48,12 @@ function HookSlotsCard({ hooks, renderCount }) {
   return h(
     'section',
     { class: 'info-card history-card inspector-panel' },
-    h('p', { class: 'panel-kicker' }, '동작 시각화'),
-    h('h3', { class: 'history-title' }, '루트 hooks'),
+    h('p', { class: 'panel-kicker' }, 'HOOKS'),
+    h('h3', { class: 'history-title' }, 'Runtime hooks'),
     h(
       'div',
       { class: 'hook-summary-card' },
-      h('p', { class: 'timeline-detail inspector-meta' }, `루트 App 렌더 ${renderCount}회`),
+      h('p', { class: 'timeline-detail inspector-meta' }, `renderCount: ${renderCount}`),
     ),
     comparedHooks.length
       ? h(
@@ -76,15 +69,15 @@ function HookSlotsCard({ hooks, renderCount }) {
               h(
                 'div',
                 { class: 'hook-slot-header' },
-                h('strong', { class: 'timeline-title' }, `슬롯 ${hook.displaySlot}`),
+                h('strong', { class: 'timeline-title' }, `slot ${hook.slot}`),
               ),
               h('p', { class: 'timeline-detail hook-kind' }, hook.hook),
-              h('p', { class: 'hook-label' }, '현재 값'),
+              h('p', { class: 'hook-label' }, 'current value'),
               renderHookFields(hook.fields, hook.summary, 'hook-after'),
             ),
           ),
         )
-      : h('p', { class: 'timeline-detail' }, '아직 기록된 hook 슬롯이 없습니다.'),
+      : h('p', { class: 'timeline-detail' }, 'No hook values recorded yet.'),
   );
 }
 
@@ -100,7 +93,7 @@ function renderHookFields(fields, summary, className) {
       h(
         'p',
         { class: 'hook-field-row' },
-        h('span', { class: 'hook-field-label' }, `${field.label}`),
+        h('span', { class: 'hook-field-label' }, `${field.label}:`),
         h('span', { class: 'hook-field-value' }, field.value),
       ),
     ),
